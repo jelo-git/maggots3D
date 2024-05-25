@@ -35,6 +35,10 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "myTeapot.h"
 #include "shaderprogram.h"
 
+#include "camera.h"
+
+Camera* camera;
+
 float speed_x = 0;
 float speed_y = 0;
 float aspectRatio = 1;
@@ -56,18 +60,49 @@ void error_callback(int error, const char* description) {
     fputs(description, stderr);
 }
 
+void mousePosCallback(GLFWwindow* window, double x, double y) {
+    static double lastX = 0;
+    static double lastY = 0;
+
+    double dx = lastX - x;
+    double dy = lastY - y;
+
+    lastX = x;
+    lastY = y;
+
+    camera->rotate(window, dx, dy);
+}
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
         if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
         if (key == GLFW_KEY_UP) speed_y = PI / 2;
         if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+        if (key == GLFW_KEY_SPACE) { 
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetCursorPos(window, camera->width / 2, camera->height / 2);
+            glfwSetCursorPosCallback(window, mousePosCallback);
+        }
+		if (key == GLFW_KEY_W) camera->speed.x = PI;
+        if (key == GLFW_KEY_S) camera->speed.x = -PI;
+        if (key == GLFW_KEY_D) camera->speed.z = PI;
+        if (key == GLFW_KEY_A) camera->speed.z = -PI;
     }
     if (action == GLFW_RELEASE) {
         if (key == GLFW_KEY_LEFT) speed_x = 0;
         if (key == GLFW_KEY_RIGHT) speed_x = 0;
         if (key == GLFW_KEY_UP) speed_y = 0;
         if (key == GLFW_KEY_DOWN) speed_y = 0;
+        if (key == GLFW_KEY_SPACE) { 
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetCursorPosCallback(window, NULL);
+			camera->firstMouse = true;
+        }
+        if (key == GLFW_KEY_W) camera->speed.x = 0;
+        if (key == GLFW_KEY_S) camera->speed.x = 0;
+        if (key == GLFW_KEY_D) camera->speed.z = 0;
+        if (key == GLFW_KEY_A) camera->speed.z = 0;
     }
 }
 
@@ -102,18 +137,24 @@ GLuint readTexture(const char* filename) {
 
 // Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0, 0.2, 0.46, 1);
     glEnable(GL_DEPTH_TEST);
     glfwSetWindowSizeCallback(window, windowResizeCallback);
     glfwSetKeyCallback(window, keyCallback);
 
     sp = new ShaderProgram("v_shader.glsl", NULL, "f_shader.glsl");
     // tex0 = readTexture("metal.png");
+
+	// Utworzenie obiektu kamery
+	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 }
 
 // Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
     delete sp;
+
+	// Usunięcie obiektu kamery
+	delete camera;
 }
 
 // Procedura rysująca zawartość sceny
@@ -121,12 +162,14 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
     // Wyczyść bufery
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 V = glm::lookAt(
-        glm::vec3(0, 0, -4),
-        glm::vec3(0, 0, 0),
-        glm::vec3(0.0f, 1.0f, 0.0f));  // Wylicz macierz widoku
+	camera->updateViewMatrix(90.0f, 0.01f, 50.0f, *sp);
 
-    glm::mat4 P = glm::perspective(90.0f * PI / 180.0f, aspectRatio, 0.01f, 50.0f);  // Wylicz macierz rzutowania
+    //glm::mat4 V = glm::lookAt(
+    //    glm::vec3(0, 0, -4),
+    //    glm::vec3(0, 0, 0),
+    //    glm::vec3(0.0f, 1.0f, 0.0f));  // Wylicz macierz widoku
+
+    //glm::mat4 P = glm::perspective(90.0f * PI / 180.0f, aspectRatio, 0.01f, 50.0f);  // Wylicz macierz rzutowania
 
     glm::mat4 M = glm::mat4(1.0f);
     M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f));  // Wylicz macierz modelu
@@ -134,8 +177,8 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
     sp->use();  // Aktywacja programu cieniującego
     // Przeslij parametry programu cieniującego do karty graficznej
-    glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-    glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+    /*glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+    glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));*/
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
     glEnableVertexAttribArray(sp->a("vertex"));                               // Włącz przesyłanie danych do atrybutu vertex
@@ -205,9 +248,17 @@ int main(void) {
     {
         angle_x += speed_x * glfwGetTime();   // Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
         angle_y += speed_y * glfwGetTime();   // Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-        glfwSetTime(0);                       // Zeruj timer
-        drawScene(window, angle_x, angle_y);  // Wykonaj procedurę rysującą
-        glfwPollEvents();                     // Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
+		
+		camera->move(glfwGetTime());
+
+        // Zeruj timer
+        glfwSetTime(0);
+
+        // Wykonaj procedurę rysującą
+        drawScene(window, angle_x, angle_y);  
+
+        // Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
+        glfwPollEvents();
     }
 
     freeOpenGLProgram(window);
