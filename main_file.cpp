@@ -20,6 +20,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
 
+#define TINYOBJLOADER_IMPLEMENTATION
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -38,7 +40,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "camera.h"
 #include "VAO.h"
 #include "EBO.h"
-
+#include "tiny_obj_loader.h"
 
 Camera* camera;
 ShaderProgram* sp;
@@ -52,45 +54,49 @@ EBO* ebo;
 float speed_x = 0;
 float speed_y = 0;
 
-//// Trójkąt 2D
-//GLfloat vertices[] = {
-//	-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, 1.0f,
-//	0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, 1.0f,
-//	0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, 1.0f
+std::vector<GLfloat> vertices = {};
+std::vector<GLfloat> normals = {};
+std::vector<GLfloat> texCoords = {};
+std::vector<GLuint> indices = {};
+
+// Trójkąt 2D
+//std::vector<GLfloat> vertices = {
+//	-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,
+//	0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,
+//	0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f
 //};
 //GLfloat colors[] = {
 //	1.0f, 0.0f, 0.0f, 1.0f,
 //	0.0f, 1.0f, 0.0f, 1.0f,
 //	0.0f, 0.0f, 1.0f, 1.0f
 //};
-//GLuint indices[] = {
+//std::vector<GLuint> indices = {
 //	0, 1, 2
 //};
 
-// Plaszczyzna 2D
-GLfloat vertices[] = {
-	-1.0f, -1.0f, 0.0f, 1.0f,
-	1.0f, -1.0f, 0.0f, 1.0f,
-	1.0f, 1.0f, 0.0f, 1.0f,
-	-1.0f, 1.0f, 0.0f, 1.0f
-};
-GLfloat colors[] = {
-	1.0f, 0.0f, 0.0f, 1.0f,
-	0.0f, 1.0f, 0.0f, 1.0f,
-	0.0f, 0.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, 0.0f, 1.0f
-};
-GLfloat texCoords[] = {
-	1.0f, 1.0f,
-	0.0f, 1.0f,
-	0.0f, 0.0f,
-	1.0f, 0.0f
-};
-GLuint indices[] = {
-	0, 1, 2,
-	2, 3, 0
-};
-
+////// Plaszczyzna 2D
+//std::vector<GLfloat> vertices = {
+//	-1.0f, -1.0f, 0.0f,
+//	1.0f, -1.0f, 0.0f,
+//	1.0f, 1.0f, 0.0f,
+//	-1.0f, 1.0f, 0.0f
+//};
+//std::vector<GLfloat> colors = {
+//	1.0f, 0.0f, 0.0f,
+//	0.0f, 1.0f, 0.0f,
+//	0.0f, 0.0f, 1.0f,
+//	1.0f, 1.0f, 0.0f
+//};
+//std::vector<GLfloat> texCoords = {
+//	1.0f, 1.0f,
+//	0.0f, 1.0f,
+//	0.0f, 0.0f,
+//	1.0f, 0.0f
+//};
+//std::vector<GLuint> indices = {
+//	0, 1, 2,
+//	2, 3, 0
+//};
 
 //// piramida 3D
 //GLfloat vertices[] = {
@@ -207,6 +213,46 @@ GLuint readTexture(const char* filename) {
 	return tex;
 }
 
+bool readModel(const char* filename) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename)) {
+		fprintf(stderr, "Nie można wczytać modelu %s: %s\n", filename, err.c_str());
+		return false;
+	}
+
+	for (const auto& shape : shapes) {
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+			size_t fv = shape.mesh.num_face_vertices[f];
+			for (size_t v = 0; v < fv; v++) {
+				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
+
+				if (idx.normal_index >= 0) {
+					normals.push_back(attrib.normals[3 * idx.normal_index + 0]);
+					normals.push_back(attrib.normals[3 * idx.normal_index + 1]);
+					normals.push_back(attrib.normals[3 * idx.normal_index + 2]);
+				}
+
+				if (idx.texcoord_index >= 0) {
+					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 0]);
+					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 1]);
+				}
+				indices.push_back(index_offset + v);
+			}
+			index_offset += fv;
+		}
+	}
+
+	return true;
+}
+
 // Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
@@ -214,9 +260,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glEnable(GL_DEPTH_TEST);
 
 	// Ustawienie cullface
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glFrontFace(GL_CCW);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_FRONT);
+	//glFrontFace(GL_CCW);
 
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -228,22 +274,37 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Wczytanie tekstur
 	defaultTexture = readTexture("texture0.png");
 
+	// Wczytanie modelu
+	readModel("models/bunny.obj");
+
+	//vertices = new std::vector<GLfloat>{
+	//-1.0f, -1.0f, 0.0f,
+	//1.0f, -1.0f, 0.0f,
+	//1.0f, 1.0f, 0.0f,
+	//-1.0f, 1.0f, 0.0f
+	//};
+	//indices = new std::vector<GLuint>{
+	//0, 1, 2,
+	//2, 3, 0
+	//};
+
+
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
 	// Wczytanie modelu
 	vao = new VAO();
 	vao->Bind();
-	vbo = new VBO(vertices, sizeof(vertices));
-	vbo2 = new VBO(colors, sizeof(colors));
-	vbo3 = new VBO(texCoords, sizeof(texCoords));
-	ebo = new EBO(indices, sizeof(indices));
-	vao->LinkAttrib(vbo, 0, 4, GL_FLOAT, 0, (void*)0);
-	vao->LinkAttrib(vbo2, 1, 4, GL_FLOAT, 0, (void*)0);
-	vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
+	vbo = new VBO(&vertices[0], vertices.size() * sizeof(vertices[0]));
+	vbo2 = new VBO(&normals[0], normals.size() * sizeof(normals[0]));
+	//vbo3 = new VBO(texCoords, sizeof(texCoords));
+	ebo = new EBO(&indices[0], indices.size() * sizeof(indices[0]));
+	vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
+	vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
+	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
 	vbo->Unbind();
 	vbo2->Unbind();
-	vbo3->Unbind();
+	//vbo3->Unbind();
 	vao->Unbind();
 	ebo->Unbind();
 }
@@ -266,8 +327,8 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	vbo2->Delete();
 	delete vbo2;
 
-	vbo3->Delete();
-	delete vbo3;
+	//vbo3->Delete();
+	//delete vbo3;
 
 	// Usunięcie obiektu EBO
 	ebo->Delete();
@@ -287,6 +348,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 	// Wylicz macierz modelu
 	glm::mat4 M = glm::mat4(1.0f);
+	M = glm::scale(M, glm::vec3(0.5f, 0.5f, 0.5f));
 	M = glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f));
 	M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -295,17 +357,17 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
 	// Uaktywnij teksturę
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, defaultTexture);
-	glUniform1i(sp->u("tex0"), 0);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, defaultTexture);
+	//glUniform1i(sp->u("tex0"), 0);
 
 	// Przekaż dane modelu
 	vao->Bind();
 
 	// Rysowanie obiektu
-	glDrawElements(GL_TRIANGLES, sizeof(vertices) / sizeof(vertices[0]), GL_UNSIGNED_INT, NULL);
+	glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, NULL);
 
-	//glDrawArrays(GL_TRIANGLES, 0, 3);  // Narysuj obiekt
+	//glDrawArrays(GL_TRIANGLES, 0, 6);  // Narysuj obiekt
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
