@@ -42,6 +42,9 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "EBO.h"
 #include "tiny_obj_loader.h"
 
+using namespace std;
+using namespace glm;
+
 Camera* camera;
 ShaderProgram* sp;
 ShaderProgram* sp_light;
@@ -133,6 +136,9 @@ std::vector<GLuint> indices = {
 //2, 3, 4,
 //3, 0, 4
 //};
+
+vector<GLfloat> verts;
+vector<GLuint> inds;
 
 std::vector<GLfloat> light_vert = {
 	-0.1f, -0.1f, 0.1f,
@@ -284,6 +290,47 @@ bool readModel(const char* filename) {
 	return true;
 }
 
+vector<GLfloat> verySimplePlane(int div, float width)
+{
+	vector<GLfloat> plane;
+
+	float triangleSide = width / div;
+	for (int row = 0; row < div + 1; row++)
+	{
+		for (int col = 0; col < div + 1; col++)
+		{
+			vec3 crntVec = vec3(col * triangleSide, 0.0, row * -triangleSide);
+			plane.push_back(crntVec.x);
+			plane.push_back(crntVec.y);
+			plane.push_back(crntVec.z);
+		}
+	}
+
+	return plane;
+}
+
+vector<GLuint> getPlaneInd(int div)
+{
+	vector<GLuint> indices;
+
+	for (int row = 0; row < div; row++)
+	{
+		for (int col = 0; col < div; col++)
+		{
+			int index = row * (div + 1) * col;
+
+			indices.push_back(index);
+			indices.push_back(index + (div + 1) + 1);
+			indices.push_back(index + (div + 1));
+
+			indices.push_back(index);
+			indices.push_back(index + 1);
+			indices.push_back(index + (div + 1) + 1);
+		}
+	}
+	return indices;
+}
+
 // Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
@@ -312,18 +359,21 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
+	verts = verySimplePlane(5, 5.0);
+	inds = getPlaneInd(5);
+
 	// Wczytanie modelu
 	vao = new VAO();
 	vao->Bind();
-	vbo = new VBO(&vertices[0], vertices.size() * sizeof(vertices[0]));
-	vbo2 = new VBO(&normals[0], normals.size() * sizeof(normals[0]));
+	vbo = new VBO(&verts[0], verts.size() * sizeof(verts[0]));
+	//vbo2 = new VBO(&normals[0], normals.size() * sizeof(normals[0]));
 	//vbo3 = new VBO(texCoords, sizeof(texCoords));
-	ebo = new EBO(&indices[0], indices.size() * sizeof(indices[0]));
+	ebo = new EBO(&inds[0], inds.size() * sizeof(inds[0]));
 	vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
+	//vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
 	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
 	vbo->Unbind();
-	vbo2->Unbind();
+	//vbo2->Unbind();
 	//vbo3->Unbind();
 	vao->Unbind();
 	ebo->Unbind();
@@ -403,7 +453,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	vao->Bind();
 
 	// Rysowanie obiektu
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
+	glDrawElements(GL_TRIANGLES, inds.size(), GL_UNSIGNED_INT, NULL);
 
 	// Rysowanie światła
 	glm::mat4 LM = glm::mat4(1.0f);
