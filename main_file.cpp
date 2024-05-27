@@ -44,6 +44,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 Camera* camera;
 ShaderProgram* sp;
+ShaderProgram* sp_light;
 
 VAO* vao;
 VBO* vbo;
@@ -51,13 +52,17 @@ VBO* vbo2;
 VBO* vbo3;
 EBO* ebo;
 
+VAO* light_vao;
+VBO* light_vbo;
+EBO* light_ebo;
+
 float speed_x = 0;
 float speed_y = 0;
 
-std::vector<GLfloat> vertices = {};
-std::vector<GLfloat> normals = {};
-std::vector<GLfloat> texCoords = {};
-std::vector<GLuint> indices = {};
+//std::vector<GLfloat> vertices = {};
+//std::vector<GLfloat> normals = {};
+//std::vector<GLfloat> texCoords = {};
+//std::vector<GLuint> indices = {};
 
 // Trójkąt 2D
 //std::vector<GLfloat> vertices = {
@@ -74,29 +79,29 @@ std::vector<GLuint> indices = {};
 //	0, 1, 2
 //};
 
-////// Plaszczyzna 2D
-//std::vector<GLfloat> vertices = {
-//	-1.0f, -1.0f, 0.0f,
-//	1.0f, -1.0f, 0.0f,
-//	1.0f, 1.0f, 0.0f,
-//	-1.0f, 1.0f, 0.0f
-//};
-//std::vector<GLfloat> colors = {
-//	1.0f, 0.0f, 0.0f,
-//	0.0f, 1.0f, 0.0f,
-//	0.0f, 0.0f, 1.0f,
-//	1.0f, 1.0f, 0.0f
-//};
-//std::vector<GLfloat> texCoords = {
-//	1.0f, 1.0f,
-//	0.0f, 1.0f,
-//	0.0f, 0.0f,
-//	1.0f, 0.0f
-//};
-//std::vector<GLuint> indices = {
-//	0, 1, 2,
-//	2, 3, 0
-//};
+// Plaszczyzna 2D
+std::vector<GLfloat> vertices = {
+	-1.0f, -1.0f, 0.0f,
+	1.0f, -1.0f, 0.0f,
+	1.0f, 1.0f, 0.0f,
+	-1.0f, 1.0f, 0.0f
+};
+std::vector<GLfloat> normals = {
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f
+};
+std::vector<GLfloat> texCoords = {
+	1.0f, 1.0f,
+	0.0f, 1.0f,
+	0.0f, 0.0f,
+	1.0f, 0.0f
+};
+std::vector<GLuint> indices = {
+	0, 1, 2,
+	2, 3, 0
+};
 
 //// piramida 3D
 //GLfloat vertices[] = {
@@ -128,6 +133,32 @@ std::vector<GLuint> indices = {};
 //2, 3, 4,
 //3, 0, 4
 //};
+
+std::vector<GLfloat> light_vert = {
+	-0.1f, -0.1f, 0.1f,
+	-0.1f, -0.1f, -0.1f,
+	0.1f, -0.1f, -0.1f,
+	0.1f, -0.1f, 0.1f,
+	-0.1f, 0.1f, 0.1f,
+	-0.1f, 0.1f, -0.1f,
+	0.1f, 0.1f, -0.1f,
+	0.1f, 0.1f, 0.1f
+};
+std::vector<GLuint> light_indi = {
+	0, 1, 2,
+	2, 3, 0,
+	4, 5, 6,
+	6, 7, 4,
+	0, 4, 7,
+	7, 3, 0,
+	1, 5, 6,
+	6, 2, 1,
+	0, 1, 5,
+	5, 4, 0,
+	3, 2, 6,
+	6, 7, 3
+};
+glm::vec4 lightColor = glm::vec4(1.0f, 0.5f, 0.0f, 1.0f);
 
 GLuint defaultTexture;
 
@@ -261,7 +292,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	// Ustawienie cullface
 	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_FRONT);
+	//glCullFace(GL_BACK);
 	//glFrontFace(GL_CCW);
 
 	// Callback funkcje
@@ -270,24 +301,13 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	// Wczytanie programu cieniującego upostępnionego przez prowadzącego
 	sp = new ShaderProgram("v_shader.glsl", NULL, "f_shader.glsl");
+	sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
 
 	// Wczytanie tekstur
 	defaultTexture = readTexture("texture0.png");
 
 	// Wczytanie modelu
-	readModel("models/bunny.obj");
-
-	//vertices = new std::vector<GLfloat>{
-	//-1.0f, -1.0f, 0.0f,
-	//1.0f, -1.0f, 0.0f,
-	//1.0f, 1.0f, 0.0f,
-	//-1.0f, 1.0f, 0.0f
-	//};
-	//indices = new std::vector<GLuint>{
-	//0, 1, 2,
-	//2, 3, 0
-	//};
-
+	//readModel("models/cornellbox.obj");
 
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
@@ -307,11 +327,23 @@ void initOpenGLProgram(GLFWwindow* window) {
 	//vbo3->Unbind();
 	vao->Unbind();
 	ebo->Unbind();
+
+	// Utworzenie obiektu światła
+	light_vao = new VAO();
+	light_vao->Bind();
+	light_vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
+	light_ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
+	light_vao->LinkAttrib(light_vbo, 0, 3, GL_FLOAT, 0, (void*)0);
+	light_vbo->Unbind();
+	light_vao->Unbind();
+	light_ebo->Unbind();
 }
 
 // Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
+	// Usunięcie programu cieniującego
 	delete sp;
+	delete sp_light;
 
 	// Usunięcie obiektu kamery
 	delete camera;
@@ -333,6 +365,16 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	// Usunięcie obiektu EBO
 	ebo->Delete();
 	delete ebo;
+
+	// Usunięcie światła
+	light_vao->Delete();
+	delete light_vao;
+
+	light_vbo->Delete();
+	delete light_vbo;
+
+	light_ebo->Delete();
+	delete light_ebo;
 }
 
 // Procedura rysująca zawartość sceny
@@ -341,31 +383,57 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Aktualizacja macierzy widoku
-	camera->updateViewMatrix(60.0f, 0.01f, 50.0f, *sp);
+	camera->updateMatrix(60.0f, 0.01f, 50.0f);
 
 	// Aktywacja programu cieniującego
 	sp->use();
 
 	// Wylicz macierz modelu
 	glm::mat4 M = glm::mat4(1.0f);
-	M = glm::scale(M, glm::vec3(0.5f, 0.5f, 0.5f));
 	M = glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f));
 	M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	// Przekaż macierz modelu do programu cieniującego
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
+	camera->shaderMatrix(*sp);
+
+	// Uaktywnij model
+	vao->Bind();
+
+	// Rysowanie obiektu
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
+
+	// Rysowanie światła
+	glm::mat4 LM = glm::mat4(1.0f);
+	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+	LM = glm::translate(LM, lightPos);
+
+	sp_light->use();
+
+	glUniformMatrix4fv(sp_light->u("M"), 1, false, glm::value_ptr(LM));
+	glUniform4fv(sp_light->u("lightColor"), 1, glm::value_ptr(lightColor));
+	glUniform3fv(sp_light->u("lightPos"), 1, glm::value_ptr(lightPos));
+	glUniform3fv(sp_light->u("viewPos"), 1, glm::value_ptr(camera->position));
+	camera->shaderMatrix(*sp_light);
+
+	light_vao->Bind();
+
+	glDrawElements(GL_TRIANGLES, light_indi.size(), GL_UNSIGNED_INT, NULL);
+
 
 	// Uaktywnij teksturę
 	//glActiveTexture(GL_TEXTURE0);
 	//glBindTexture(GL_TEXTURE_2D, defaultTexture);
 	//glUniform1i(sp->u("tex0"), 0);
 
-	// Przekaż dane modelu
-	vao->Bind();
+	//// Przekaż dane modelu
+	//vao->Bind();
 
-	// Rysowanie obiektu
-	glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, NULL);
+	//// Rysowanie obiektu
+	//glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, NULL);
+	//vao->Unbind();
 
 	//glDrawArrays(GL_TRIANGLES, 0, 6);  // Narysuj obiekt
 

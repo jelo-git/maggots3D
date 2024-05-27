@@ -9,26 +9,33 @@
 #include "shaderprogram.h"
 
 class Camera {
-	public:
-		glm::vec3 position;
-		glm::vec3 facing;
-		glm::vec3 up;
-		glm::vec3 speed;
+public:
+	glm::vec3 position;
+	glm::vec3 facing;
+	glm::vec3 up;
 
-		bool firstMouse;
+	//movement speed
+	glm::vec3 speed;
 
-		int width;
-		int height;
+	glm::mat4 view;
+	glm::mat4 projection;
 
-		float sensitivity;
-		float yaw, pitch;
+	//window size
+	int width;
+	int height;
 
-		Camera(int width, int height, glm::vec3 position);
+	//mouse controls
+	float sensitivity;
+	float yaw, pitch;
+	bool firstMouse;
 
-		void updateViewMatrix(float fov, float near, float far, ShaderProgram& shader, const char* view = "V", const char* projection = "P");
+	Camera(int width, int height, glm::vec3 position);
 
-		void rotate(GLFWwindow* window, float yaw, float pitch);
-		void move(double dt);
+	void updateMatrix(float fov, float near, float far);
+	void shaderMatrix(ShaderProgram& shader, const char* view = "V", const char* projection = "P");
+
+	void rotate(GLFWwindow* window, float yaw, float pitch);
+	void move(double dt);
 };
 
 #endif
