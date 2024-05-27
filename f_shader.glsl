@@ -1,31 +1,27 @@
 #version 330
 
-//uniform sampler2D tex0;
+uniform vec4 lightColor;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
 
-in vec4 n;
-in vec4 l;
-in vec4 v;
-//in vec4 fragColor;
-//in vec2 fragTexCoord;
+in vec3 fragNormal;
+in vec3 fragPos;
 
 out vec4 color;
 
 void main() {
+	// diffuse
+	vec3 normal = normalize(fragNormal);
+	vec3 lightDir = normalize(lightPos - fragPos);
 
-	//Znormalizowane interpolowane wektory
-	vec4 ml = normalize(l);
-	vec4 mn = normalize(n);
-	vec4 mv = normalize(v);
-	//Wektor odbity
-	vec4 mr = reflect(-ml, mn);
+	float diff = max(dot(normal, lightDir), 0.0);
 
-    //color = fragColor;
-    //color = texture(tex0, fragTexCoord);
-    vec4 fragColor = vec4(1.0, 0.5, 0.0, 1.0);
+	// specular
+	float specularStrength = 0.5;
+	vec3 viewDir = normalize(viewPos - fragPos);
+	vec3 reflectDir = reflect(-lightDir, normal);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 4) * specularStrength;
 
-	//Obliczenie modelu oœwietlenia
-	float nl = clamp(dot(mn, ml), 0, 1);
-	float rv = pow(clamp(dot(mr, mv), 0, 1),25);
-	color= vec4(fragColor.rgb * nl, fragColor.a) + vec4(fragColor.rgb*rv, 0);
-
+	// combine results
+	color = vec4(1.0, 1.0, 1.0, 1.0) * lightColor * (diff + spec);
 }

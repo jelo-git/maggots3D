@@ -42,7 +42,9 @@
     <ClCompile Include="VBO.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="f_light_shader.glsl" />
     <None Include="f_shader.glsl" />
+    <None Include="v_light_shader.glsl" />
     <None Include="v_shader.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
