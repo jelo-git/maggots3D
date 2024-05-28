@@ -139,6 +139,7 @@ std::vector<GLuint> indices = {
 
 vector<GLfloat> verts;
 vector<GLuint> inds;
+vector<GLfloat> norms;
 
 std::vector<GLfloat> light_vert = {
 	-0.1f, -0.1f, 0.1f,
@@ -300,7 +301,7 @@ vector<GLfloat> verySimplePlane(int div, float width)
 	{
 		for (int col = 0; col < div + 1; col++)
 		{
-			vec3 crntVec = vec3(col * triangleSide, (rand() % 200) / 100, row * -triangleSide);
+			vec3 crntVec = vec3(col * triangleSide, row * -triangleSide, (rand() % 200) / 100);
 			plane.push_back(crntVec.x);
 			plane.push_back(crntVec.y);
 			plane.push_back(crntVec.z);
@@ -330,6 +331,43 @@ vector<GLuint> getPlaneInd(int div)
 		}
 	}
 	return indices;
+}
+
+vector<GLfloat> getPlaneNormals(vector<GLfloat>& plane, int div)
+{
+	vector<GLfloat> normals;
+	
+	for (int row = 0; row < div; row++)
+	{
+		for (int col = 0; col < div; col++)
+		{
+			int index = row * (div + 1) + col;
+
+			vec3 a1(plane[3 * (index + (div + 1))] - plane[3 * index], 
+				plane[3 * (index + (div + 1)) + 1] - plane[3 * index + 1], 
+				plane[3 * (index + (div + 1)) + 2] - plane[3 * index + 2]);
+
+			vec3 b(plane[3 * (index + (div + 1) + 1)] - plane[3 * index],
+				plane[3 * (index + (div + 1) + 1) + 1] - plane[3 * index + 1],
+				plane[3 * (index + (div + 1) + 1) + 2] - plane[3 * index + 2]);
+
+			vec3 a2(plane[3 * (index + 1)] - plane[3 * index],
+				plane[3 * (index + 1) + 1] - plane[3 * index + 1],
+				plane[3 * (index + 1) + 2] - plane[3 * index + 2]);
+
+			vec3 normal1 = normalize(cross(a1, b));
+			vec3 normal2 = normalize(cross(b, a2));
+			
+			normals.push_back(normal1.x);
+			normals.push_back(normal1.y);
+			normals.push_back(normal1.z);
+
+			normals.push_back(normal2.x);
+			normals.push_back(normal2.y);
+			normals.push_back(normal2.z);
+		}
+	}
+	return normals;
 }
 
 // Procedura inicjująca
@@ -362,28 +400,20 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	verts = verySimplePlane(4, 4.0);
 	inds = getPlaneInd(4);
-	int c = 0;
-	for (auto v : verts)
-	{
-		fprintf(stdout, "%.2f ", v);
-		if (++c == 3)
-		{
-			fprintf(stdout, "\n ", v);
-			c = 0;
-		}
-	}
+	norms = getPlaneNormals(verts, 4);
+
 	// Wczytanie modelu
 	vao = new VAO();
 	vao->Bind();
 	vbo = new VBO(&verts[0], verts.size() * sizeof(verts[0]));
-	//vbo2 = new VBO(&normals[0], normals.size() * sizeof(normals[0]));
+	vbo2 = new VBO(&norms[0], norms.size() * sizeof(norms[0]));
 	//vbo3 = new VBO(texCoords, sizeof(texCoords));
 	ebo = new EBO(&inds[0], inds.size() * sizeof(inds[0]));
 	vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	//vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
+	vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
 	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
 	vbo->Unbind();
-	//vbo2->Unbind();
+	vbo2->Unbind();
 	//vbo3->Unbind();
 	vao->Unbind();
 	ebo->Unbind();
@@ -450,7 +480,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 	// Wylicz macierz modelu
 	glm::mat4 M = glm::mat4(1.0f);
-	M = glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f));
+	M = glm::translate(M, glm::vec3(-2.0f, -1.0f, 0.0f));
 	M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));
 
