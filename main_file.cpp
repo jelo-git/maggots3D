@@ -292,6 +292,7 @@ bool readModel(const char* filename) {
 
 vector<GLfloat> verySimplePlane(int div, float width)
 {
+	srand(NULL);
 	vector<GLfloat> plane;
 
 	float triangleSide = width / div;
@@ -299,7 +300,7 @@ vector<GLfloat> verySimplePlane(int div, float width)
 	{
 		for (int col = 0; col < div + 1; col++)
 		{
-			vec3 crntVec = vec3(col * triangleSide, 0.0, row * -triangleSide);
+			vec3 crntVec = vec3(col * triangleSide, (rand() % 200) / 100, row * -triangleSide);
 			plane.push_back(crntVec.x);
 			plane.push_back(crntVec.y);
 			plane.push_back(crntVec.z);
