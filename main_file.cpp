@@ -317,7 +317,7 @@ vector<GLuint> getPlaneInd(int div)
 	{
 		for (int col = 0; col < div; col++)
 		{
-			int index = row * (div + 1) * col;
+			int index = row * (div + 1) + col;
 
 			indices.push_back(index);
 			indices.push_back(index + (div + 1) + 1);
@@ -359,9 +359,18 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
-	verts = verySimplePlane(5, 5.0);
-	inds = getPlaneInd(5);
-
+	verts = verySimplePlane(4, 4.0);
+	inds = getPlaneInd(4);
+	int c = 0;
+	for (auto v : verts)
+	{
+		fprintf(stdout, "%.2f ", v);
+		if (++c == 3)
+		{
+			fprintf(stdout, "\n ", v);
+			c = 0;
+		}
+	}
 	// Wczytanie modelu
 	vao = new VAO();
 	vao->Bind();

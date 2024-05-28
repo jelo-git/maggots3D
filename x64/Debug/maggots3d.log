@@ -8,10 +8,12 @@ C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(284,39): warning C4267: 'a
               _Ty=GLuint
           ]
 C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(337,34): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(456,65): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(473,71): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(544,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(547,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(370,27): warning C4474: 'fprintf' : too many arguments passed for format string
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(370,27): message : placeholders and their parameters expect 0 variadic arguments, but 1 were provided
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(465,65): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(482,71): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
 C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(553,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(554,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(556,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(562,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(563,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
   maggots3d.vcxproj -> C:\Users\pasha\Documents\GKiW\maggots3D\x64\Debug\maggots3d.exe
