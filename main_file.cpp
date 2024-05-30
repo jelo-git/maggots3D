@@ -30,6 +30,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/noise.hpp>
 
 #include "constants.h"
 #include "lodepng.h"
@@ -41,6 +42,11 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "VAO.h"
 #include "EBO.h"
 #include "tiny_obj_loader.h"
+
+#define PERSISTANCE 0.5
+#define OCTAVES 4
+#define FREQUENCY 0.3
+#define TERRAIN_SIZE 30
 
 using namespace std;
 using namespace glm;
@@ -291,17 +297,30 @@ bool readModel(const char* filename) {
 	return true;
 }
 
-vector<GLfloat> verySimplePlane(int div, float width)
+float perlinNoise(float x, float y, float frequency, int octaves, float persistence) {
+	float total = 0.0f;
+	float amplitude = 1.0f;
+
+	for (int i = 0; i < octaves; i++) 
+	{
+		total += perlin(vec2(x * frequency, y * frequency)) * amplitude;
+		amplitude *= persistence;
+		frequency *= 2.0f;
+	}
+
+	return total;
+}
+
+vector<GLfloat> generatePlane(int div)
 {
-	srand(NULL);
 	vector<GLfloat> plane;
 
-	float triangleSide = width / div;
+	float triangleSide = 1.0;
 	for (int row = 0; row < div + 1; row++)
 	{
 		for (int col = 0; col < div + 1; col++)
 		{
-			vec3 crntVec = vec3(col * triangleSide, row * -triangleSide, (rand() % 200) / 100);
+			vec3 crntVec = vec3(col * triangleSide, row * -triangleSide, perlinNoise(row, col, FREQUENCY, OCTAVES, PERSISTANCE));
 			plane.push_back(crntVec.x);
 			plane.push_back(crntVec.y);
 			plane.push_back(crntVec.z);
@@ -333,18 +352,18 @@ vector<GLuint> getPlaneInd(int div)
 	return indices;
 }
 
-vector<GLfloat> getPlaneNormals(vector<GLfloat>& plane, int div)
+vector<GLfloat> getPlaneNormals(const vector<GLfloat>& plane, int div)
 {
 	vector<GLfloat> normals;
-	
+
 	for (int row = 0; row < div; row++)
 	{
 		for (int col = 0; col < div; col++)
 		{
 			int index = row * (div + 1) + col;
 
-			vec3 a1(plane[3 * (index + (div + 1))] - plane[3 * index], 
-				plane[3 * (index + (div + 1)) + 1] - plane[3 * index + 1], 
+			vec3 a1(plane[3 * (index + (div + 1))] - plane[3 * index],
+				plane[3 * (index + (div + 1)) + 1] - plane[3 * index + 1],
 				plane[3 * (index + (div + 1)) + 2] - plane[3 * index + 2]);
 
 			vec3 b(plane[3 * (index + (div + 1) + 1)] - plane[3 * index],
@@ -357,7 +376,7 @@ vector<GLfloat> getPlaneNormals(vector<GLfloat>& plane, int div)
 
 			vec3 normal1 = normalize(cross(a1, b));
 			vec3 normal2 = normalize(cross(b, a2));
-			
+
 			normals.push_back(normal1.x);
 			normals.push_back(normal1.y);
 			normals.push_back(normal1.z);
@@ -369,7 +388,6 @@ vector<GLfloat> getPlaneNormals(vector<GLfloat>& plane, int div)
 	}
 	return normals;
 }
-
 // Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
@@ -398,9 +416,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
-	verts = verySimplePlane(4, 4.0);
-	inds = getPlaneInd(4);
-	norms = getPlaneNormals(verts, 4);
+	verts = generatePlane(TERRAIN_SIZE);
+	inds = getPlaneInd(TERRAIN_SIZE);
+	norms = getPlaneNormals(verts, TERRAIN_SIZE);
 
 	// Wczytanie modelu
 	vao = new VAO();
