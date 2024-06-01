@@ -1,20 +1,22 @@
 ﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(517,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (gkiw_st_12_win.vcxproj).  This can lead to incorrect clean and rebuild behavior.
   main_file.cpp
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(193,29): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(193,25): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(291,39): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\physics.h(22,25): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(203,29): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(203,25): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(301,39): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
           with
           [
               _Ty=GLuint
           ]
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(322,118): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(322,82): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(322,77): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(393,34): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(513,65): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(530,71): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(601,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(604,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(610,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(611,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(333,118): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(333,82): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(333,77): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(405,34): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(517,30): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(527,65): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(544,71): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(617,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(620,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(626,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\pasha\Documents\GKiW\maggots3D\main_file.cpp(627,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
   maggots3d.vcxproj -> C:\Users\pasha\Documents\GKiW\maggots3D\x64\Debug\maggots3d.exe

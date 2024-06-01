@@ -32,6 +32,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
 
+#include <chrono>
+
 #include "constants.h"
 #include "lodepng.h"
 #include "myCube.h"
@@ -42,11 +44,15 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "VAO.h"
 #include "EBO.h"
 #include "tiny_obj_loader.h"
+#include "physics.h"
 
 #define PERSISTANCE 0.5
 #define OCTAVES 4
 #define FREQUENCY 0.3
 #define TERRAIN_SIZE 30
+
+#define ALPHA_ANGLE 60.0
+#define BETA_ANGLE 0.0
 
 using namespace std;
 using namespace glm;
@@ -67,6 +73,9 @@ EBO* light_ebo;
 
 float speed_x = 0;
 float speed_y = 0;
+
+float movement_time = 0;
+float velocity = 7.0;
 
 //std::vector<GLfloat> vertices = {};
 //std::vector<GLfloat> normals = {};
@@ -146,6 +155,7 @@ std::vector<GLuint> indices = {
 vector<GLfloat> verts;
 vector<GLuint> inds;
 vector<GLfloat> norms;
+glm::vec3 initial_position(-2.0f, -1.0f, 0.0f);
 
 std::vector<GLfloat> light_vert = {
 	-0.1f, -0.1f, 0.1f,
@@ -388,6 +398,7 @@ vector<GLfloat> getPlaneNormals(const vector<GLfloat>& plane, int div)
 	}
 	return normals;
 }
+
 // Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
@@ -408,7 +419,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
 
 	// Wczytanie tekstur
-	defaultTexture = readTexture("texture0.png");
+	defaultTexture = readTexture("sand.jpg");
 
 	// Wczytanie modelu
 	//readModel("models/cornellbox.obj");
@@ -417,22 +428,22 @@ void initOpenGLProgram(GLFWwindow* window) {
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
 	verts = generatePlane(TERRAIN_SIZE);
-	inds = getPlaneInd(TERRAIN_SIZE);
+	inds = getPlaneInd(6);
 	norms = getPlaneNormals(verts, TERRAIN_SIZE);
 
 	// Wczytanie modelu
 	vao = new VAO();
 	vao->Bind();
-	vbo = new VBO(&verts[0], verts.size() * sizeof(verts[0]));
-	vbo2 = new VBO(&norms[0], norms.size() * sizeof(norms[0]));
-	//vbo3 = new VBO(texCoords, sizeof(texCoords));
-	ebo = new EBO(&inds[0], inds.size() * sizeof(inds[0]));
+	vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
+	vbo2 = new VBO(myCubeNormals, sizeof(myCubeNormals));
+	vbo3 = new VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
+	ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
 	vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
 	vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
-	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
+	vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
 	vbo->Unbind();
 	vbo2->Unbind();
-	//vbo3->Unbind();
+	vbo3->Unbind();
 	vao->Unbind();
 	ebo->Unbind();
 
@@ -467,8 +478,8 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	vbo2->Delete();
 	delete vbo2;
 
-	//vbo3->Delete();
-	//delete vbo3;
+	vbo3->Delete();
+	delete vbo3;
 
 	// Usunięcie obiektu EBO
 	ebo->Delete();
@@ -498,10 +509,12 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 	// Wylicz macierz modelu
 	glm::mat4 M = glm::mat4(1.0f);
-	M = glm::translate(M, glm::vec3(-2.0f, -1.0f, 0.0f));
-	M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));
-
+	vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, movement_time, initial_position);
+	//fprintf(stdout, "%.2f %.2f %.2f \n", direction.x, direction.y, direction.z);
+	M = glm::translate(M, direction);
+	/*M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));*/
+	movement_time += glfwGetTime();
 	// Przekaż macierz modelu do programu cieniującego
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
@@ -550,6 +563,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 }
 
 int main(void) {
+	using namespace std::chrono;
 	GLFWwindow* window;
 
 	// Zarejestruj procedurę obsługi błędów
@@ -595,6 +609,7 @@ int main(void) {
 	float frames = 0;
 	float avg_fps = 0;
 	glfwSetTime(0);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// Oblicz liczbę klatek na sekundę
