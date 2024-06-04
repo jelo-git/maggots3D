@@ -46,7 +46,6 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "particle.h"
 
 #include "tiny_obj_loader.h"
-#include "physics.h"
 #include "hitbox.h"
 
 #define PERSISTANCE 0.5
