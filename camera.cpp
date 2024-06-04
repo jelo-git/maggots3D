@@ -11,6 +11,8 @@ Camera::Camera(int width, int height, glm::vec3 position) {
 	this->pitch = 0.0f;
 	this->firstMouse = true;
 	this->speed = glm::vec3(0.0f);
+	this->view = glm::mat4(1.0f);
+	this->projection = glm::mat4(1.0f);
 }
 
 void Camera::updateMatrix(float fov, float near, float far) {

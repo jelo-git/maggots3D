@@ -43,6 +43,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "camera.h"
 #include "VAO.h"
 #include "EBO.h"
+#include "particle.h"
+
 #include "tiny_obj_loader.h"
 #include "physics.h"
 #include "hitbox.h"
@@ -52,7 +54,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #define FREQUENCY 0.3
 #define TERRAIN_SIZE 30
 
-#define ALPHA_ANGLE 60.0
+#define ALPHA_ANGLE 89.0
 #define BETA_ANGLE 0.0
 
 using namespace std;
@@ -61,6 +63,7 @@ using namespace glm;
 Camera* camera;
 ShaderProgram* sp;
 ShaderProgram* sp_light;
+ShaderProgram* sp_particle;
 
 VAO* vao;
 VBO* vbo;
@@ -72,11 +75,13 @@ VAO* light_vao;
 VBO* light_vbo;
 EBO* light_ebo;
 
+ParticleSystem* explosionParticles;
+
 float speed_x = 0;
 float speed_y = 0;
 
-float movement_time = 0;
 float velocity = 7.0;
+float time_total = 0.0;
 
 //std::vector<GLfloat> vertices = {};
 //std::vector<GLfloat> normals = {};
@@ -234,6 +239,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_S) camera->speed.x = 0;
 		if (key == GLFW_KEY_D) camera->speed.z = 0;
 		if (key == GLFW_KEY_A) camera->speed.z = 0;
+		if (key == GLFW_KEY_P) explosionParticles->emit(100);
 	}
 }
 
@@ -312,7 +318,7 @@ float perlinNoise(float x, float y, float frequency, int octaves, float persiste
 	float total = 0.0f;
 	float amplitude = 1.0f;
 
-	for (int i = 0; i < octaves; i++) 
+	for (int i = 0; i < octaves; i++)
 	{
 		total += perlin(vec2(x * frequency, y * frequency)) * amplitude;
 		amplitude *= persistence;
@@ -407,9 +413,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glEnable(GL_DEPTH_TEST);
 
 	// Ustawienie cullface
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
-	//glFrontFace(GL_CCW);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
 
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -418,6 +424,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Wczytanie programu cieniującego upostępnionego przez prowadzącego
 	sp = new ShaderProgram("v_shader.glsl", NULL, "f_shader.glsl");
 	sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
+	sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
 
 	// Wczytanie tekstur
 	defaultTexture = readTexture("sand.jpg");
@@ -457,6 +464,17 @@ void initOpenGLProgram(GLFWwindow* window) {
 	light_vbo->Unbind();
 	light_vao->Unbind();
 	light_ebo->Unbind();
+
+	// Utworzenie particle system
+	ParticleInfo info;
+	info.position = glm::vec3(-1.0f, 1.0f, 0.0f);
+	info.sizeEnd = 1.0f;
+	info.ttl = 10.0f;
+	info.gravity = glm::vec3(0.0f, -9.0f, 0.0f);
+	info.velocity = glm::vec3(0.0f, 2.0f, 0.0f);
+	info.velocityVariation = glm::vec3(1.0f, 1.0f, 1.0f);
+	explosionParticles = new ParticleSystem(info);
+	explosionParticles->emit(100);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -495,6 +513,9 @@ void freeOpenGLProgram(GLFWwindow* window) {
 
 	light_ebo->Delete();
 	delete light_ebo;
+
+	// Usunięcie particle system
+	delete explosionParticles;
 }
 
 // Procedura rysująca zawartość sceny
@@ -510,12 +531,11 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 	// Wylicz macierz modelu
 	glm::mat4 M = glm::mat4(1.0f);
-	vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, movement_time, initial_position);
+	vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, time_total, initial_position);
 	//fprintf(stdout, "%.2f %.2f %.2f \n", direction.x, direction.y, direction.z);
 	M = glm::translate(M, direction);
 	/*M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));*/
-	movement_time += glfwGetTime();
 	// Przekaż macierz modelu do programu cieniującego
 	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
@@ -543,6 +563,10 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	light_vao->Bind();
 
 	glDrawElements(GL_TRIANGLES, light_indi.size(), GL_UNSIGNED_INT, NULL);
+
+
+	// Rysowanie particle system
+	explosionParticles->render(*sp_particle, *camera);
 
 
 	// Uaktywnij teksturę
@@ -592,7 +616,7 @@ int main(void) {
 
 	// Czekaj na 1 powrót plamki przed pokazaniem ukrytego bufora
 	// ustaw na 0 by wylaczyc Vsync, default 1
-	glfwSwapInterval(0);
+	glfwSwapInterval(1);
 
 	// Zainicjuj bibliotekę GLEW
 	if (glewInit() != GLEW_OK) {
@@ -629,6 +653,11 @@ int main(void) {
 
 		// Przesuń kamerę
 		camera->move(glfwGetTime());
+
+		time_total += glfwGetTime();
+
+		// Aktualizuj particle system
+		explosionParticles->update(glfwGetTime());
 
 		// Zeruj timer
 		glfwSetTime(0);
