@@ -15,8 +15,7 @@ public:
 	GLfloat x1, x2;
 	GLfloat y1, y2;
 	GLfloat z1, z2;
-	
-	Hitbox();
+
 	Hitbox(const std::vector<GLfloat>& vertices);
 
 	void updateHitbox(const std::vector<GLfloat>& vertices, const glm::mat4& M, const glm::mat4& V);

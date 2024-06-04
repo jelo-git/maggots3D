@@ -51,10 +51,10 @@
     <ClInclude Include="particle.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="rocket.h">
+    <ClInclude Include="player.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="player.h">
+    <ClInclude Include="rocket.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>
@@ -86,21 +86,18 @@
     <ClCompile Include="particle.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="rocket.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="player.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="hitbox.cpp">
+    <ClCompile Include="rocket.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="f_shader.glsl">
+    <None Include="f_terrain_shader.glsl">
       <Filter>Pliki zasobów</Filter>
     </None>
-    <None Include="v_shader.glsl">
+    <None Include="v_terrain_shader.glsl">
       <Filter>Pliki zasobów</Filter>
     </None>
     <None Include="f_light_shader.glsl">
@@ -113,6 +110,9 @@
       <Filter>Pliki zasobów</Filter>
     </None>
     <None Include="f_particle_shader.glsl">
+      <Filter>Pliki zasobów</Filter>
+    </None>
+    <None Include="F:\Downloads\gkiw_st_07_win\f_textured.glsl">
       <Filter>Pliki zasobów</Filter>
     </None>
   </ItemGroup>
