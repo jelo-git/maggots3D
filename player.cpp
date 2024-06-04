@@ -2,7 +2,7 @@
 
 #define MAX_HP 300
 
-Player::Player(GLfloat x, GLfloat y, GLfloat z, const std::vector<GLfloat>& vertices)
+Player::Player(GLfloat x, GLfloat y, GLfloat z, std::vector<GLfloat>& vertices)
 {
 	this->hp = MAX_HP;
 	this->is_active = false;
@@ -28,7 +28,7 @@ void Player::updateHP()
 //	// ToDo
 //}
 
-void Player::move(glm::vec2& direction, const std::vector<GLfloat>& plane, const int div)
+void Player::move(glm::vec2& direction, std::vector<GLfloat>& plane, const int div)
 {
 	float zcoord = 0.0;
 	position += glm::vec3(direction, 0);

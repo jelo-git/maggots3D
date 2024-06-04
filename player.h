@@ -1,11 +1,11 @@
+#ifndef PLAYER_H
+#define PLAYER_H
+
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <vector>
 
 #include "hitbox.h"
-
-#ifndef PLAYER_H
-#define PLAYER_H
 
 class Player
 {
@@ -17,11 +17,11 @@ public:
 	bool is_active;
 	Hitbox hitbox;
 
-	Player(GLfloat x, GLfloat y, GLfloat z, const std::vector<GLfloat>& vertices);
-	
+	Player(GLfloat x, GLfloat y, GLfloat z, std::vector<GLfloat>& vertices);
+
 	//void attack(GLfloat rocket_initial_velocity, GLfloat vertical_angle, GLfloat horizontal_angle);
-	void move(glm::vec2& direction, const std::vector<GLfloat>& plane, const int div);
-	void updateHP(); 
+	void move(glm::vec2& direction, std::vector<GLfloat>& plane, const int div);
+	void updateHP();
 	void newTurn();
 
 private:

@@ -22,6 +22,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="EBO.h" />
+    <ClInclude Include="hitbox.h" />
     <ClInclude Include="lodepng.h" />
     <ClInclude Include="particle.h" />
     <ClInclude Include="player.h" />
@@ -37,6 +38,7 @@
   <ItemGroup>
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="EBO.cpp" />
+    <ClCompile Include="hitbox.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="main_file.cpp" />
     <ClCompile Include="particle.cpp" />

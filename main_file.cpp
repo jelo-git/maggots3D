@@ -44,13 +44,14 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #include "tiny_obj_loader.h"
 #include "hitbox.h"
+#include "player.h"
 
 #define PERSISTANCE 0.5
 #define OCTAVES 4
 #define FREQUENCY 0.3
 #define TERRAIN_SIZE 10
-#define TERRAIN_DENSITY 2.0
-#define TERRAIN_HEIGHT 3.0 //bigger is flatter
+#define TERRAIN_DENSITY 1.0
+#define TERRAIN_HEIGHT 1.0 //bigger is flatter
 
 #define ALPHA_ANGLE 89.0
 #define BETA_ANGLE 0.0
@@ -64,7 +65,9 @@ ParticleSystem* explosionParticles;
 
 Terrain* terrain;
 
-VAO* player;
+Player* player;
+VAO* player_VAO;
+glm::vec2 playerPosition = glm::vec2(2.0f, -2.0f);
 GLuint texture;
 
 ShaderProgram* sp;
@@ -120,8 +123,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	if (action == GLFW_PRESS) {
 		if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
 		if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
-		if (key == GLFW_KEY_UP) speed_y = PI / 2;
-		if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+		if (key == GLFW_KEY_UP) speed_y = -PI / 2;
+		if (key == GLFW_KEY_DOWN) speed_y = PI / 2;
 		if (key == GLFW_KEY_SPACE) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			glfwSetCursorPos(window, camera->width / 2, camera->height / 2);
@@ -272,20 +275,22 @@ void initOpenGLProgram(GLFWwindow* window) {
 	texture = readTexture("cate.png");
 
 	// Wczytanie gracza
-	player = new VAO();
-	player->Bind();
+	player_VAO = new VAO();
+	player_VAO->Bind();
 	VBO vbo = VBO(vertices.data(), vertices.size() * sizeof(GLfloat));
 	VBO vboNormals = VBO(normals.data(), normals.size() * sizeof(GLfloat));
 	VBO vboTexCoords = VBO(texCoords.data(), texCoords.size() * sizeof(GLfloat));
 	EBO ebo = EBO(indices.data(), indices.size() * sizeof(GLuint));
-	player->LinkAttrib(&vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	player->LinkAttrib(&vboNormals, 1, 3, GL_FLOAT, 0, (void*)0);
-	player->LinkAttrib(&vboTexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
+	player_VAO->LinkAttrib(&vbo, 0, 3, GL_FLOAT, 0, (void*)0);
+	player_VAO->LinkAttrib(&vboNormals, 1, 3, GL_FLOAT, 0, (void*)0);
+	player_VAO->LinkAttrib(&vboTexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
 	vbo.Unbind();
 	vboNormals.Unbind();
 	vboTexCoords.Unbind();
-	player->Unbind();
+	player_VAO->Unbind();
 	ebo.Unbind();
+
+	player = new Player(playerPosition.x, -playerPosition.y, 0.0f, vertices);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -303,6 +308,9 @@ void freeOpenGLProgram(GLFWwindow* window) {
 
 	// Usunięcie terenu
 	delete terrain;
+
+	// Usunięcie gracza
+	delete player;
 }
 
 // Procedura rysująca zawartość sceny
@@ -323,14 +331,19 @@ void drawScene(GLFWwindow* window) {
 	sp->use();
 	camera->shaderMatrix(*sp);
 	glm::mat4 M = glm::mat4(1.0f);
-	M = glm::translate(M, glm::vec3(0.0f, 0.0f, 0.0f));
+	//M = glm::translate(M, player->position);
+	float height = -terrain->getHeight(playerPosition.x, playerPosition.y);
+	M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
+	M = glm::scale(M, glm::vec3(0.1f, 0.1f, 0.1f));
+	//fprintf(stdout, "Player position: %f %f %f\n", player->position.x, player->position.y, player->position.z);
+	fprintf(stdout, "Player pos: %f %f %f\n", playerPosition.x, height, playerPosition.y);
 	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
 	glUniform1i(sp->u("textureBase"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	player->Bind();
+	player_VAO->Bind();
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
-	player->Unbind();
+	player_VAO->Unbind();
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
@@ -398,6 +411,14 @@ int main(void) {
 
 		// Aktualizuj particle system
 		explosionParticles->update(glfwGetTime());
+
+
+		//Przesuń gracza
+		playerPosition.x += speed_x * glfwGetTime();
+		playerPosition.y += speed_y * glfwGetTime();
+
+		//player->move(playerPosition, terrain->vertices, TERRAIN_SIZE);
+		explosionParticles->info.position = glm::vec3(playerPosition.x, 0.0f, playerPosition.y);
 
 		// Zeruj timer
 		glfwSetTime(0);

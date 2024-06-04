@@ -125,17 +125,21 @@ void Terrain::generateTexCoords() {
 
 float Terrain::perlinNoise(int x, int y, float frequency, int octaves, float persistence)
 {
-	float total = 0.0f;
-	float amplitude = 1.0f;
+	float total = 0;
+	float amplitude = 1;
+	float maxValue = 0;
 
 	for (int i = 0; i < octaves; i++)
 	{
-		total += glm::perlin(glm::vec2(x * frequency, y * frequency)) * amplitude;
+		total += glm::perlin(glm::vec2(x, y) * frequency) * amplitude;
+
+		maxValue += amplitude;
+
 		amplitude *= persistence;
-		frequency *= 2.0f;
+		frequency *= 2;
 	}
 
-	return total * height;
+	return total / maxValue;
 }
 
 float Terrain::barycentricInterpolation(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec2 pos)
@@ -190,7 +194,9 @@ void Terrain::draw(ShaderProgram& shader, Camera& camera)
 	camera.shaderMatrix(shader, "V", "P");
 
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-5.0f, -5.0f, 5.0f));
+	//model = glm::translate(model, glm::vec3(size * triangleLength, 0.0f, -size * triangleLength));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
 	glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
 

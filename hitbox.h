@@ -1,9 +1,9 @@
+#ifndef HITBOX_H
+#define HITBOX_H
+
 #include <vector>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-
-#ifndef HITBOX_H
-#define HITBOX_H
 
 #define X 0
 #define Y 1
@@ -16,6 +16,7 @@ public:
 	GLfloat y1, y2;
 	GLfloat z1, z2;
 
+	Hitbox();
 	Hitbox(const std::vector<GLfloat>& vertices);
 
 	void updateHitbox(const std::vector<GLfloat>& vertices, const glm::mat4& M, const glm::mat4& V);

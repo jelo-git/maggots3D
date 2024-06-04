@@ -1,12 +1,12 @@
+#ifndef ROCKET_H
+#define ROCKET_H
+
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <vector>
 
 #include "hitbox.h"
 #include "player.h"
-
-#ifndef ROCKET_H
-#define ROCKET_H
 
 class Rocket
 {

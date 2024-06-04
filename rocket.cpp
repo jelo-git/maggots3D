@@ -53,8 +53,8 @@ void Rocket::setHorizontalAngle(GLfloat horizontal_angle)
 
 bool Rocket::collisionHappened(Player& player)
 {
-	if (this->hitbox.x2 >= player.hitbox.x1 && 
-		this->hitbox.y2 >= player.hitbox.y1 && 
+	if (this->hitbox.x2 >= player.hitbox.x1 &&
+		this->hitbox.y2 >= player.hitbox.y1 &&
 		this->hitbox.z2 >= player.hitbox.z1)
 		return true;
 
