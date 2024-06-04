@@ -37,7 +37,6 @@
   <ItemGroup>
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="EBO.cpp" />
-    <ClCompile Include="hitbox.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="main_file.cpp" />
     <ClCompile Include="particle.cpp" />
@@ -49,12 +48,13 @@
     <ClCompile Include="VBO.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="F:\Downloads\gkiw_st_07_win\f_textured.glsl" />
     <None Include="f_light_shader.glsl" />
     <None Include="f_particle_shader.glsl" />
-    <None Include="f_shader.glsl" />
+    <None Include="f_terrain_shader.glsl" />
     <None Include="v_light_shader.glsl" />
     <None Include="v_particle_shader.glsl" />
-    <None Include="v_shader.glsl" />
+    <None Include="v_terrain_shader.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

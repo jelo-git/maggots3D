@@ -32,18 +32,15 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
 
-#include <chrono>
-
 #include "constants.h"
 #include "lodepng.h"
-#include "myCube.h"
-#include "myTeapot.h"
 #include "shaderprogram.h"
 
 #include "camera.h"
 #include "VAO.h"
 #include "EBO.h"
 #include "particle.h"
+#include "terrain.h"
 
 #include "tiny_obj_loader.h"
 #include "hitbox.h"
@@ -51,148 +48,55 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #define PERSISTANCE 0.5
 #define OCTAVES 4
 #define FREQUENCY 0.3
-#define TERRAIN_SIZE 30
-#define TRIANGLE_SIDE 1.0f
+#define TERRAIN_SIZE 10
+#define TERRAIN_DENSITY 2.0
+#define TERRAIN_HEIGHT 3.0 //bigger is flatter
 
 #define ALPHA_ANGLE 89.0
 #define BETA_ANGLE 0.0
 
-using namespace std;
-using namespace glm;
+
+#define VSYNC 0 //1 - włączony, 0 - wyłączony
 
 Camera* camera;
+
+ParticleSystem* explosionParticles;
+
+Terrain* terrain;
+
+VAO* player;
+GLuint texture;
 
 ShaderProgram* sp;
 ShaderProgram* sp_light;
 ShaderProgram* sp_particle;
 
-VAO* terrain_VAO;
-GLuint terrain_indi_size;
-GLuint grass_base, grass_spec;
-
-VAO* vao;
-VBO* vbo;
-VBO* vbo2;
-VBO* vbo3;
-EBO* ebo;
-
-VAO* light_vao;
-VBO* light_vbo;
-EBO* light_ebo;
-
-ParticleSystem* explosionParticles;
-
 float speed_x = 0;
 float speed_y = 0;
 
-float velocity = 7.0;
-float time_total = 0.0;
-
-//std::vector<GLfloat> vertices = {};
-//std::vector<GLfloat> normals = {};
-//std::vector<GLfloat> texCoords = {};
-//std::vector<GLuint> indices = {};
-
-// Trójkąt 2D
-//std::vector<GLfloat> vertices = {
-//	-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,
-//	0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,
-//	0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f
-//};
-//GLfloat colors[] = {
-//	1.0f, 0.0f, 0.0f, 1.0f,
-//	0.0f, 1.0f, 0.0f, 1.0f,
-//	0.0f, 0.0f, 1.0f, 1.0f
-//};
-//std::vector<GLuint> indices = {
-//	0, 1, 2
-//};
-
 // Plaszczyzna 2D
-//std::vector<GLfloat> vertices = {
-//	-1.0f, -1.0f, 0.0f,
-//	1.0f, -1.0f, 0.0f,
-//	1.0f, 1.0f, 0.0f,
-//	-1.0f, 1.0f, 0.0f
-//};
-//std::vector<GLfloat> normals = {
-//	0.0f, 1.0f, 0.0f,
-//	0.0f, 1.0f, 0.0f,
-//	0.0f, 1.0f, 0.0f,
-//	0.0f, 1.0f, 0.0f
-//};
-//std::vector<GLfloat> texCoords = {
-//	1.0f, 1.0f,
-//	0.0f, 1.0f,
-//	0.0f, 0.0f,
-//	1.0f, 0.0f
-//};
-//std::vector<GLuint> indices = {
-//	0, 1, 2,
-//	2, 3, 0
-//};
-
-//// piramida 3D
-//GLfloat vertices[] = {
-//-0.5f, 0.0f, 0.5f, 1.0f,
-//-0.5f, 0.0f, -0.5f, 1.0f,
-//0.5f, 0.0f, -0.5f, 1.0f,
-//0.5f, 0.0f, 0.5f, 1.0f,
-//0.0f, 0.8f, 0.0f, 1.0f
-//};
-//GLfloat colors[] = {
-//1.0f, 0.0f, 0.0f, 1.0f,
-//0.0f, 1.0f, 0.0f, 1.0f,
-//0.0f, 0.0f, 1.0f, 1.0f,
-//1.0f, 1.0f, 0.0f, 1.0f,
-//0.0f, 1.0f, 1.0f, 1.0f
-//};
-//GLfloat texCoords[] = {
-//2.0f, 2.0f,
-//2.0f, 0.0f,
-//0.0f, 0.0f,
-//2.0f, 0.0f,
-//1.0f, 2.0f
-//};
-//GLuint indices[] = {
-//2, 1, 0,
-//3, 2, 0,
-//0, 1, 4,
-//1, 2, 4,
-//2, 3, 4,
-//3, 0, 4
-//};
-
-glm::vec3 initial_position(-2.0f, -1.0f, 0.0f);
-
-//light cube
-std::vector<GLfloat> light_vert = {
-	-0.1f, -0.1f, 0.1f,
-	-0.1f, -0.1f, -0.1f,
-	0.1f, -0.1f, -0.1f,
-	0.1f, -0.1f, 0.1f,
-	-0.1f, 0.1f, 0.1f,
-	-0.1f, 0.1f, -0.1f,
-	0.1f, 0.1f, -0.1f,
-	0.1f, 0.1f, 0.1f
+std::vector<GLfloat> vertices = {
+	-1.0f, -1.0f, 0.0f,
+	1.0f, -1.0f, 0.0f,
+	1.0f, 1.0f, 0.0f,
+	-1.0f, 1.0f, 0.0f
 };
-std::vector<GLuint> light_indi = {
+std::vector<GLfloat> normals = {
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+	0.0f, 1.0f, 0.0f
+};
+std::vector<GLfloat> texCoords = {
+	0.0f, 0.0f,
+	1.0f, 0.0f,
+	1.0f, 1.0f,
+	0.0f, 1.0f
+};
+std::vector<GLuint> indices = {
 	0, 1, 2,
-	2, 3, 0,
-	4, 5, 6,
-	6, 7, 4,
-	0, 4, 7,
-	7, 3, 0,
-	1, 5, 6,
-	6, 2, 1,
-	0, 1, 5,
-	5, 4, 0,
-	3, 2, 6,
-	6, 7, 3
+	2, 3, 0
 };
-glm::vec4 lightColor = glm::vec4(1.0f, 0.5f, 0.0f, 1.0f);
-
-
 
 // Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -242,7 +146,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_S) camera->speed.x = 0;
 		if (key == GLFW_KEY_D) camera->speed.z = 0;
 		if (key == GLFW_KEY_A) camera->speed.z = 0;
-		if (key == GLFW_KEY_P) explosionParticles->emit(100);
+		if (key == GLFW_KEY_P) {
+			explosionParticles->emit(100);
+		}
 	}
 }
 
@@ -261,152 +167,67 @@ GLuint readTexture(const char* filename) {
 	// Wczytaj obrazek
 	unsigned error = lodepng::decode(image, width, height, filename);
 
-	// Import do pamięci karty graficznej
-	glGenTextures(1, &tex);             // Zainicjuj jeden uchwyt
-	glBindTexture(GL_TEXTURE_2D, tex);  // Uaktywnij uchwyt
-	// Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
+	if (error) {
+		fprintf(stderr, "Nie można wczytać tekstury %s: %s\n", filename, lodepng_error_text(error));
+		return 0;
+	}
+	else {
+		fprintf(stdout, "Wczytano teksture %s, rozmiaru: %d x %d\n", filename, width, height);
+	}
+
+	//Import do pamięci karty graficznej
+	glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
+	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
+	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// Wygeneruj mipmapy
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	return tex;
 }
 
-//bool readModel(const char* filename) {
-//	tinyobj::attrib_t attrib;
-//	std::vector<tinyobj::shape_t> shapes;
-//	std::vector<tinyobj::material_t> materials;
-//	std::string err;
-//
-//	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename)) {
-//		fprintf(stderr, "Nie można wczytać modelu %s: %s\n", filename, err.c_str());
-//		return false;
-//	}
-//
-//	for (const auto& shape : shapes) {
-//		size_t index_offset = 0;
-//		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-//			size_t fv = shape.mesh.num_face_vertices[f];
-//			for (size_t v = 0; v < fv; v++) {
-//				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
-//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
-//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
-//
-//				if (idx.normal_index >= 0) {
-//					normals.push_back(attrib.normals[3 * idx.normal_index + 0]);
-//					normals.push_back(attrib.normals[3 * idx.normal_index + 1]);
-//					normals.push_back(attrib.normals[3 * idx.normal_index + 2]);
-//				}
-//
-//				if (idx.texcoord_index >= 0) {
-//					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 0]);
-//					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 1]);
-//				}
-//				indices.push_back(index_offset + v);
-//			}
-//			index_offset += fv;
-//		}
-//	}
-//
-//	return true;
-//}
+bool readModel(const char* filename) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
 
-float perlinNoise(float x, float y, float frequency, int octaves, float persistence) {
-	float total = 0.0f;
-	float amplitude = 1.0f;
-
-	for (int i = 0; i < octaves; i++)
-	{
-		total += perlin(vec2(x * frequency, y * frequency)) * amplitude;
-		amplitude *= persistence;
-		frequency *= 2.0f;
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename)) {
+		fprintf(stderr, "Nie można wczytać modelu %s: %s\n", filename, err.c_str());
+		return false;
 	}
 
-	return total;
-}
+	for (const auto& shape : shapes) {
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+			size_t fv = shape.mesh.num_face_vertices[f];
+			for (size_t v = 0; v < fv; v++) {
+				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
+				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
 
-vector<GLfloat> generatePlane(int div)
-{
-	vector<GLfloat> plane;
+				if (idx.normal_index >= 0) {
+					normals.push_back(attrib.normals[3 * idx.normal_index + 0]);
+					normals.push_back(attrib.normals[3 * idx.normal_index + 1]);
+					normals.push_back(attrib.normals[3 * idx.normal_index + 2]);
+				}
 
-	float triangleSide = TRIANGLE_SIDE;
-	for (int row = 0; row < div + 1; row++)
-	{
-		for (int col = 0; col < div + 1; col++)
-		{
-			vec3 crntVec = vec3(col * triangleSide, row * -triangleSide, perlinNoise(row, col, FREQUENCY, OCTAVES, PERSISTANCE));
-			plane.push_back(crntVec.x);
-			plane.push_back(crntVec.y);
-			plane.push_back(crntVec.z);
+				if (idx.texcoord_index >= 0) {
+					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 0]);
+					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 1]);
+				}
+				indices.push_back(index_offset + v);
+			}
+			index_offset += fv;
 		}
 	}
 
-	return plane;
-}
-
-vector<GLuint> getPlaneInd(int div)
-{
-	vector<GLuint> indices;
-
-	for (int row = 0; row < div; row++)
-	{
-		for (int col = 0; col < div; col++)
-		{
-			int index = row * (div + 1) + col;
-
-			indices.push_back(index);
-			indices.push_back(index + (div + 1) + 1);
-			indices.push_back(index + (div + 1));
-
-			indices.push_back(index);
-			indices.push_back(index + 1);
-			indices.push_back(index + (div + 1) + 1);
-		}
-	}
-	return indices;
-}
-
-vector<GLfloat> getPlaneNormals(const vector<GLfloat>& plane, int div)
-{
-	vector<GLfloat> normals;
-
-	for (int row = 0; row < div; row++)
-	{
-		for (int col = 0; col < div; col++)
-		{
-			int index = row * (div + 1) + col;
-
-			vec3 a1(plane[3 * (index + (div + 1))] - plane[3 * index],
-				plane[3 * (index + (div + 1)) + 1] - plane[3 * index + 1],
-				plane[3 * (index + (div + 1)) + 2] - plane[3 * index + 2]);
-
-			vec3 b(plane[3 * (index + (div + 1) + 1)] - plane[3 * index],
-				plane[3 * (index + (div + 1) + 1) + 1] - plane[3 * index + 1],
-				plane[3 * (index + (div + 1) + 1) + 2] - plane[3 * index + 2]);
-
-			vec3 a2(plane[3 * (index + 1)] - plane[3 * index],
-				plane[3 * (index + 1) + 1] - plane[3 * index + 1],
-				plane[3 * (index + 1) + 2] - plane[3 * index + 2]);
-
-			vec3 normal1 = normalize(cross(a1, b));
-			vec3 normal2 = normalize(cross(b, a2));
-
-			normals.push_back(normal1.x);
-			normals.push_back(normal1.y);
-			normals.push_back(normal1.z);
-
-			normals.push_back(normal2.x);
-			normals.push_back(normal2.y);
-			normals.push_back(normal2.z);
-		}
-	}
-	return normals;
+	return true;
 }
 
 // Procedura inicjująca
@@ -425,91 +246,16 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glfwSetKeyCallback(window, keyCallback);
 
 	// Wczytanie programu cieniującego upostępnionego przez prowadzącego
-	sp = new ShaderProgram("v_shader.glsl", NULL, "f_shader.glsl");
-	//sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
-	//sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
-
-	// Wczytanie tekstur
-	grass_base = readTexture("/textures/grass_base.jpg");
-	grass_spec = readTexture("/textures/grass_h.jpg");
-	// Wczytanie modelu
-	//readModel("models/cornellbox.obj");
+	sp = new ShaderProgram("v_terrain_shader.glsl", NULL, "f_terrain_shader.glsl");
+	sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
+	sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
 
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
-	// Utworzenie planszy
-	std::vector<GLfloat> verts = {
-	-1.0f,  0.0f,-1.0f,
-	1.0f,  0.0f,-1.0f,
-	1.0f, 0.0f, 1.0f,
-	-1.0f, 0.0f, 1.0f,
-	};
-	std::vector<GLfloat> norms = {
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f
-	};
-	std::vector<GLfloat> texCoords = {
-		1.0f, 1.0f,
-		0.0f, 1.0f,
-		0.0f, 0.0f,
-		1.0f, 0.0f
-	};
-	std::vector<GLuint> inds = {
-		0, 1, 2,
-		2, 3, 0
-	};
-	//vector<GLfloat> verts = generatePlane(TERRAIN_SIZE);
-	//vector<GLuint> inds = getPlaneInd(6);
-	//vector<GLfloat> norms = getPlaneNormals(verts, TERRAIN_SIZE);
-
-	terrain_indi_size = inds.size();
-	terrain_VAO = new VAO();
-	terrain_VAO->Bind();
-	VBO terrain_Verts = VBO(&verts[0], verts.size() * sizeof(verts[0]));
-	VBO terrain_Normals = VBO(&norms[0], norms.size() * sizeof(norms[0]));
-	VBO terrain_TexCoords = VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
-	EBO terrain_Inds = EBO(&inds[0], inds.size() * sizeof(inds[0]));
-	terrain_VAO->LinkAttrib(&terrain_Verts, 0, 3, GL_FLOAT, 0, (void*)0);
-	terrain_VAO->LinkAttrib(&terrain_Normals, 1, 3, GL_FLOAT, 0, (void*)0);
-	terrain_VAO->LinkAttrib(&terrain_TexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
-	terrain_Verts.Unbind();
-	terrain_Normals.Unbind();
-	terrain_TexCoords.Unbind();
-	terrain_VAO->Unbind();
-	terrain_Inds.Unbind();
-
-	//// Wczytanie modelu
-	//vao = new VAO();
-	//vao->Bind();
-	//vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
-	//vbo2 = new VBO(myCubeNormals, sizeof(myCubeNormals));
-	//vbo3 = new VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
-	//ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
-	//vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	//vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
-	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
-	//vbo->Unbind();
-	//vbo2->Unbind();
-	//vbo3->Unbind();
-	//vao->Unbind();
-	//ebo->Unbind();
-
-	// Utworzenie obiektu światła
-	light_vao = new VAO();
-	light_vao->Bind();
-	light_vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
-	light_ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
-	light_vao->LinkAttrib(light_vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	light_vbo->Unbind();
-	light_vao->Unbind();
-	light_ebo->Unbind();
-
 	// Utworzenie particle system
 	ParticleInfo info;
-	info.position = glm::vec3(-1.0f, 1.0f, 0.0f);
+	info.position = glm::vec3(0.0f, 1.0f, 0.0f);
 	info.sizeEnd = 1.0f;
 	info.ttl = 10.0f;
 	info.gravity = glm::vec3(0.0f, -9.0f, 0.0f);
@@ -517,6 +263,29 @@ void initOpenGLProgram(GLFWwindow* window) {
 	info.velocityVariation = glm::vec3(1.0f, 1.0f, 1.0f);
 	explosionParticles = new ParticleSystem(info);
 	explosionParticles->emit(100);
+
+	// Utworzenie terenu
+	terrain = new Terrain(TERRAIN_SIZE, TERRAIN_DENSITY, TERRAIN_HEIGHT, FREQUENCY, OCTAVES, PERSISTANCE);
+
+	// Wczytanie tekstur
+	terrain->texture_base = readTexture("sand.png");
+	texture = readTexture("cate.png");
+
+	// Wczytanie gracza
+	player = new VAO();
+	player->Bind();
+	VBO vbo = VBO(vertices.data(), vertices.size() * sizeof(GLfloat));
+	VBO vboNormals = VBO(normals.data(), normals.size() * sizeof(GLfloat));
+	VBO vboTexCoords = VBO(texCoords.data(), texCoords.size() * sizeof(GLfloat));
+	EBO ebo = EBO(indices.data(), indices.size() * sizeof(GLuint));
+	player->LinkAttrib(&vbo, 0, 3, GL_FLOAT, 0, (void*)0);
+	player->LinkAttrib(&vboNormals, 1, 3, GL_FLOAT, 0, (void*)0);
+	player->LinkAttrib(&vboTexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
+	vbo.Unbind();
+	vboNormals.Unbind();
+	vboTexCoords.Unbind();
+	player->Unbind();
+	ebo.Unbind();
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -524,124 +293,50 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	// Usunięcie programu cieniującego
 	delete sp;
 	delete sp_light;
+	delete sp_particle;
 
 	// Usunięcie obiektu kamery
 	delete camera;
 
-	// Usunięcie obiektu VAO
-	vao->Delete();
-	delete vao;
-
-	// Usunięcie obiektu VBO
-	vbo->Delete();
-	delete vbo;
-
-	vbo2->Delete();
-	delete vbo2;
-
-	vbo3->Delete();
-	delete vbo3;
-
-	// Usunięcie obiektu EBO
-	ebo->Delete();
-	delete ebo;
-
-	// Usunięcie światła
-	light_vao->Delete();
-	delete light_vao;
-
-	light_vbo->Delete();
-	delete light_vbo;
-
-	light_ebo->Delete();
-	delete light_ebo;
-
-	// Usunięcie terenu
-	terrain_VAO->Delete();
-	delete terrain_VAO;
-
 	// Usunięcie particle system
 	delete explosionParticles;
+
+	// Usunięcie terenu
+	delete terrain;
 }
 
 // Procedura rysująca zawartość sceny
-void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
+void drawScene(GLFWwindow* window) {
 	// Wyczyść bufery
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Aktualizacja macierzy widoku
 	camera->updateMatrix(60.0f, 0.01f, 50.0f);
 
-	//// Rysowanie pocisku
-	//sp->use();
-
-	//glm::mat4 M = glm::mat4(1.0f);
-	//vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, time_total, initial_position);
-	//M = glm::translate(M, direction);
-
-	//glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	//glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
-	//camera->shaderMatrix(*sp);
-
-	//vao->Bind();
-
-	//glDrawElements(GL_TRIANGLES, inds.size(), GL_UNSIGNED_INT, NULL);
-
-	//// Rysowanie światła
-	//glm::mat4 LM = glm::mat4(1.0f);
-	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	//LM = glm::translate(LM, lightPos);
-
-	//sp_light->use();
-
-	//glUniformMatrix4fv(sp_light->u("M"), 1, false, glm::value_ptr(LM));
-	//glUniform4fv(sp_light->u("lightColor"), 1, glm::value_ptr(lightColor));
-	//glUniform3fv(sp_light->u("lightPos"), 1, glm::value_ptr(lightPos));
-	//glUniform3fv(sp_light->u("viewPos"), 1, glm::value_ptr(camera->position));
-	//camera->shaderMatrix(*sp_light);
-
-	//light_vao->Bind();
-
-	//glDrawElements(GL_TRIANGLES, light_indi.size(), GL_UNSIGNED_INT, NULL);
-
-	//// Rysowanie particle system
-	//explosionParticles->render(*sp_particle, *camera);
-
 	// Rysowanie terenu
+	terrain->draw(*sp, *camera);
+
+	//Rysowanie particle system
+	explosionParticles->render(*sp_particle, *camera);
+
+	// Rysowanie gracza
 	sp->use();
-	//Grass Base
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, grass_base);
-	//glUniform1i(sp->u("tex0"), 0);
-	////Grass Specular
-	//glActiveTexture(GL_TEXTURE1);
-	//glBindTexture(GL_TEXTURE_2D, grass_spec);
-	//glUniform1i(sp->u("tex1"), 0);
-	//Light and View uniforms
-	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
-	glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(lightPos));
-	glUniform3fv(sp->u("viewPos"), 1, glm::value_ptr(camera->position));
-	//Model matrix
-	glm::mat4 TM = glm::mat4(1.0f);
-	TM = glm::translate(TM, glm::vec3(0.0f, -1.0f, 0.0f));
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(TM));
-	//Draw terrain
-	terrain_VAO->Bind();
-	glDrawElements(GL_TRIANGLES, terrain_indi_size, GL_UNSIGNED_INT, NULL);
-
-
-
-	// Uaktywnij teksturę
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, defaultTexture);
-	//glUniform1i(sp->u("tex0"), 0);
+	camera->shaderMatrix(*sp);
+	glm::mat4 M = glm::mat4(1.0f);
+	M = glm::translate(M, glm::vec3(0.0f, 0.0f, 0.0f));
+	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+	glUniform1i(sp->u("textureBase"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	player->Bind();
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
+	player->Unbind();
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
 }
 
 int main(void) {
-	using namespace std::chrono;
 	GLFWwindow* window;
 
 	// Zarejestruj procedurę obsługi błędów
@@ -667,9 +362,8 @@ int main(void) {
 	// Od tego momentu kontekst okna staje się aktywny i polecenia OpenGL będą dotyczyć właśnie jego.
 	glfwMakeContextCurrent(window);
 
-	// Czekaj na 1 powrót plamki przed pokazaniem ukrytego bufora
-	// ustaw na 0 by wylaczyc Vsync, default 1
-	glfwSwapInterval(1);
+	// Czekaj na x powrót plamki przed pokazaniem ukrytego bufora
+	glfwSwapInterval(VSYNC);
 
 	// Zainicjuj bibliotekę GLEW
 	if (glewInit() != GLEW_OK) {
@@ -681,8 +375,6 @@ int main(void) {
 	initOpenGLProgram(window);
 
 	// Główna pętla
-	float angle_x = 0;
-	float angle_y = 0;
 	float time = 0;
 	float frames = 0;
 	float avg_fps = 0;
@@ -701,13 +393,8 @@ int main(void) {
 			frames = 0;
 		}
 
-		angle_x += speed_x * glfwGetTime();
-		angle_y += speed_y * glfwGetTime();
-
 		// Przesuń kamerę
 		camera->move(glfwGetTime());
-
-		time_total += glfwGetTime();
 
 		// Aktualizuj particle system
 		explosionParticles->update(glfwGetTime());
@@ -716,7 +403,7 @@ int main(void) {
 		glfwSetTime(0);
 
 		// Wykonaj procedurę rysującą
-		drawScene(window, angle_x, angle_y);
+		drawScene(window);
 
 		// Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 		glfwPollEvents();

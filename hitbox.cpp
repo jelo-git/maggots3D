@@ -1,8 +1,6 @@
 #include "hitbox.h"
 #include <algorithm>
 
-Hitbox::Hitbox() {}
-
 std::vector<glm::vec4> Hitbox::toVec4Vector(const std::vector<GLfloat>& vertices)
 {
 	std::vector<glm::vec4> vec4Vertices;

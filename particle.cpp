@@ -94,6 +94,6 @@ void ParticleSystem::render(ShaderProgram& shader, Camera& camera)
 		glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
 		this->vao.Bind();
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+		this->vao.Unbind();
 	}
-
 }
