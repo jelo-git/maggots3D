@@ -53,6 +53,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #define OCTAVES 4
 #define FREQUENCY 0.3
 #define TERRAIN_SIZE 30
+#define TRIANGLE_SIDE 1.0f
 
 #define ALPHA_ANGLE 89.0
 #define BETA_ANGLE 0.0
@@ -61,9 +62,14 @@ using namespace std;
 using namespace glm;
 
 Camera* camera;
+
 ShaderProgram* sp;
 ShaderProgram* sp_light;
 ShaderProgram* sp_particle;
+
+VAO* terrain_VAO;
+GLuint terrain_indi_size;
+GLuint grass_base, grass_spec;
 
 VAO* vao;
 VBO* vbo;
@@ -104,28 +110,28 @@ float time_total = 0.0;
 //};
 
 // Plaszczyzna 2D
-std::vector<GLfloat> vertices = {
-	-1.0f, -1.0f, 0.0f,
-	1.0f, -1.0f, 0.0f,
-	1.0f, 1.0f, 0.0f,
-	-1.0f, 1.0f, 0.0f
-};
-std::vector<GLfloat> normals = {
-	0.0f, 1.0f, 0.0f,
-	0.0f, 1.0f, 0.0f,
-	0.0f, 1.0f, 0.0f,
-	0.0f, 1.0f, 0.0f
-};
-std::vector<GLfloat> texCoords = {
-	1.0f, 1.0f,
-	0.0f, 1.0f,
-	0.0f, 0.0f,
-	1.0f, 0.0f
-};
-std::vector<GLuint> indices = {
-	0, 1, 2,
-	2, 3, 0
-};
+//std::vector<GLfloat> vertices = {
+//	-1.0f, -1.0f, 0.0f,
+//	1.0f, -1.0f, 0.0f,
+//	1.0f, 1.0f, 0.0f,
+//	-1.0f, 1.0f, 0.0f
+//};
+//std::vector<GLfloat> normals = {
+//	0.0f, 1.0f, 0.0f,
+//	0.0f, 1.0f, 0.0f,
+//	0.0f, 1.0f, 0.0f,
+//	0.0f, 1.0f, 0.0f
+//};
+//std::vector<GLfloat> texCoords = {
+//	1.0f, 1.0f,
+//	0.0f, 1.0f,
+//	0.0f, 0.0f,
+//	1.0f, 0.0f
+//};
+//std::vector<GLuint> indices = {
+//	0, 1, 2,
+//	2, 3, 0
+//};
 
 //// piramida 3D
 //GLfloat vertices[] = {
@@ -158,11 +164,9 @@ std::vector<GLuint> indices = {
 //3, 0, 4
 //};
 
-vector<GLfloat> verts;
-vector<GLuint> inds;
-vector<GLfloat> norms;
 glm::vec3 initial_position(-2.0f, -1.0f, 0.0f);
 
+//light cube
 std::vector<GLfloat> light_vert = {
 	-0.1f, -0.1f, 0.1f,
 	-0.1f, -0.1f, -0.1f,
@@ -189,7 +193,7 @@ std::vector<GLuint> light_indi = {
 };
 glm::vec4 lightColor = glm::vec4(1.0f, 0.5f, 0.0f, 1.0f);
 
-GLuint defaultTexture;
+
 
 // Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -274,45 +278,45 @@ GLuint readTexture(const char* filename) {
 	return tex;
 }
 
-bool readModel(const char* filename) {
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string err;
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename)) {
-		fprintf(stderr, "Nie można wczytać modelu %s: %s\n", filename, err.c_str());
-		return false;
-	}
-
-	for (const auto& shape : shapes) {
-		size_t index_offset = 0;
-		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-			size_t fv = shape.mesh.num_face_vertices[f];
-			for (size_t v = 0; v < fv; v++) {
-				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
-				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
-				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
-
-				if (idx.normal_index >= 0) {
-					normals.push_back(attrib.normals[3 * idx.normal_index + 0]);
-					normals.push_back(attrib.normals[3 * idx.normal_index + 1]);
-					normals.push_back(attrib.normals[3 * idx.normal_index + 2]);
-				}
-
-				if (idx.texcoord_index >= 0) {
-					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 0]);
-					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 1]);
-				}
-				indices.push_back(index_offset + v);
-			}
-			index_offset += fv;
-		}
-	}
-
-	return true;
-}
+//bool readModel(const char* filename) {
+//	tinyobj::attrib_t attrib;
+//	std::vector<tinyobj::shape_t> shapes;
+//	std::vector<tinyobj::material_t> materials;
+//	std::string err;
+//
+//	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename)) {
+//		fprintf(stderr, "Nie można wczytać modelu %s: %s\n", filename, err.c_str());
+//		return false;
+//	}
+//
+//	for (const auto& shape : shapes) {
+//		size_t index_offset = 0;
+//		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+//			size_t fv = shape.mesh.num_face_vertices[f];
+//			for (size_t v = 0; v < fv; v++) {
+//				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 0]);
+//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 1]);
+//				vertices.push_back(attrib.vertices[3 * idx.vertex_index + 2]);
+//
+//				if (idx.normal_index >= 0) {
+//					normals.push_back(attrib.normals[3 * idx.normal_index + 0]);
+//					normals.push_back(attrib.normals[3 * idx.normal_index + 1]);
+//					normals.push_back(attrib.normals[3 * idx.normal_index + 2]);
+//				}
+//
+//				if (idx.texcoord_index >= 0) {
+//					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 0]);
+//					texCoords.push_back(attrib.texcoords[2 * idx.texcoord_index + 1]);
+//				}
+//				indices.push_back(index_offset + v);
+//			}
+//			index_offset += fv;
+//		}
+//	}
+//
+//	return true;
+//}
 
 float perlinNoise(float x, float y, float frequency, int octaves, float persistence) {
 	float total = 0.0f;
@@ -332,7 +336,7 @@ vector<GLfloat> generatePlane(int div)
 {
 	vector<GLfloat> plane;
 
-	float triangleSide = 1.0;
+	float triangleSide = TRIANGLE_SIDE;
 	for (int row = 0; row < div + 1; row++)
 	{
 		for (int col = 0; col < div + 1; col++)
@@ -413,9 +417,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glEnable(GL_DEPTH_TEST);
 
 	// Ustawienie cullface
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glFrontFace(GL_CCW);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
+	//glFrontFace(GL_CCW);
 
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -423,37 +427,76 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	// Wczytanie programu cieniującego upostępnionego przez prowadzącego
 	sp = new ShaderProgram("v_shader.glsl", NULL, "f_shader.glsl");
-	sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
-	sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
+	//sp_light = new ShaderProgram("v_light_shader.glsl", NULL, "f_light_shader.glsl");
+	//sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
 
 	// Wczytanie tekstur
-	defaultTexture = readTexture("sand.jpg");
-
+	grass_base = readTexture("/textures/grass_base.jpg");
+	grass_spec = readTexture("/textures/grass_h.jpg");
 	// Wczytanie modelu
 	//readModel("models/cornellbox.obj");
 
 	// Utworzenie obiektu kamery
 	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
 
-	verts = generatePlane(TERRAIN_SIZE);
-	inds = getPlaneInd(6);
-	norms = getPlaneNormals(verts, TERRAIN_SIZE);
+	// Utworzenie planszy
+	std::vector<GLfloat> verts = {
+	-1.0f,  0.0f,-1.0f,
+	1.0f,  0.0f,-1.0f,
+	1.0f, 0.0f, 1.0f,
+	-1.0f, 0.0f, 1.0f,
+	};
+	std::vector<GLfloat> norms = {
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f
+	};
+	std::vector<GLfloat> texCoords = {
+		1.0f, 1.0f,
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+		1.0f, 0.0f
+	};
+	std::vector<GLuint> inds = {
+		0, 1, 2,
+		2, 3, 0
+	};
+	//vector<GLfloat> verts = generatePlane(TERRAIN_SIZE);
+	//vector<GLuint> inds = getPlaneInd(6);
+	//vector<GLfloat> norms = getPlaneNormals(verts, TERRAIN_SIZE);
 
-	// Wczytanie modelu
-	vao = new VAO();
-	vao->Bind();
-	vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
-	vbo2 = new VBO(myCubeNormals, sizeof(myCubeNormals));
-	vbo3 = new VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
-	ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
-	vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
-	vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
-	vbo->Unbind();
-	vbo2->Unbind();
-	vbo3->Unbind();
-	vao->Unbind();
-	ebo->Unbind();
+	terrain_indi_size = inds.size();
+	terrain_VAO = new VAO();
+	terrain_VAO->Bind();
+	VBO terrain_Verts = VBO(&verts[0], verts.size() * sizeof(verts[0]));
+	VBO terrain_Normals = VBO(&norms[0], norms.size() * sizeof(norms[0]));
+	VBO terrain_TexCoords = VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
+	EBO terrain_Inds = EBO(&inds[0], inds.size() * sizeof(inds[0]));
+	terrain_VAO->LinkAttrib(&terrain_Verts, 0, 3, GL_FLOAT, 0, (void*)0);
+	terrain_VAO->LinkAttrib(&terrain_Normals, 1, 3, GL_FLOAT, 0, (void*)0);
+	terrain_VAO->LinkAttrib(&terrain_TexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
+	terrain_Verts.Unbind();
+	terrain_Normals.Unbind();
+	terrain_TexCoords.Unbind();
+	terrain_VAO->Unbind();
+	terrain_Inds.Unbind();
+
+	//// Wczytanie modelu
+	//vao = new VAO();
+	//vao->Bind();
+	//vbo = new VBO(&light_vert[0], light_vert.size() * sizeof(light_vert[0]));
+	//vbo2 = new VBO(myCubeNormals, sizeof(myCubeNormals));
+	//vbo3 = new VBO(&texCoords[0], texCoords.size() * sizeof(texCoords[0]));
+	//ebo = new EBO(&light_indi[0], light_indi.size() * sizeof(light_indi[0]));
+	//vao->LinkAttrib(vbo, 0, 3, GL_FLOAT, 0, (void*)0);
+	//vao->LinkAttrib(vbo2, 1, 3, GL_FLOAT, 0, (void*)0);
+	//vao->LinkAttrib(vbo3, 2, 2, GL_FLOAT, 0, (void*)0);
+	//vbo->Unbind();
+	//vbo2->Unbind();
+	//vbo3->Unbind();
+	//vao->Unbind();
+	//ebo->Unbind();
 
 	// Utworzenie obiektu światła
 	light_vao = new VAO();
@@ -514,6 +557,10 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	light_ebo->Delete();
 	delete light_ebo;
 
+	// Usunięcie terenu
+	terrain_VAO->Delete();
+	delete terrain_VAO;
+
 	// Usunięcie particle system
 	delete explosionParticles;
 }
@@ -526,62 +573,69 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	// Aktualizacja macierzy widoku
 	camera->updateMatrix(60.0f, 0.01f, 50.0f);
 
-	// Aktywacja programu cieniującego
-	sp->use();
+	//// Rysowanie pocisku
+	//sp->use();
 
-	// Wylicz macierz modelu
-	glm::mat4 M = glm::mat4(1.0f);
-	vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, time_total, initial_position);
-	//fprintf(stdout, "%.2f %.2f %.2f \n", direction.x, direction.y, direction.z);
-	M = glm::translate(M, direction);
-	/*M = glm::rotate(M, angle_y + glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f));*/
-	// Przekaż macierz modelu do programu cieniującego
-	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
-	camera->shaderMatrix(*sp);
+	//glm::mat4 M = glm::mat4(1.0f);
+	//vec3 direction = getMovementCoords(velocity, ALPHA_ANGLE, BETA_ANGLE, time_total, initial_position);
+	//M = glm::translate(M, direction);
 
-	// Uaktywnij model
-	vao->Bind();
+	//glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+	//glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
+	//camera->shaderMatrix(*sp);
 
-	// Rysowanie obiektu
-	glDrawElements(GL_TRIANGLES, inds.size(), GL_UNSIGNED_INT, NULL);
+	//vao->Bind();
 
-	// Rysowanie światła
-	glm::mat4 LM = glm::mat4(1.0f);
+	//glDrawElements(GL_TRIANGLES, inds.size(), GL_UNSIGNED_INT, NULL);
+
+	//// Rysowanie światła
+	//glm::mat4 LM = glm::mat4(1.0f);
 	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	LM = glm::translate(LM, lightPos);
+	//LM = glm::translate(LM, lightPos);
 
-	sp_light->use();
+	//sp_light->use();
 
-	glUniformMatrix4fv(sp_light->u("M"), 1, false, glm::value_ptr(LM));
-	glUniform4fv(sp_light->u("lightColor"), 1, glm::value_ptr(lightColor));
-	glUniform3fv(sp_light->u("lightPos"), 1, glm::value_ptr(lightPos));
-	glUniform3fv(sp_light->u("viewPos"), 1, glm::value_ptr(camera->position));
-	camera->shaderMatrix(*sp_light);
+	//glUniformMatrix4fv(sp_light->u("M"), 1, false, glm::value_ptr(LM));
+	//glUniform4fv(sp_light->u("lightColor"), 1, glm::value_ptr(lightColor));
+	//glUniform3fv(sp_light->u("lightPos"), 1, glm::value_ptr(lightPos));
+	//glUniform3fv(sp_light->u("viewPos"), 1, glm::value_ptr(camera->position));
+	//camera->shaderMatrix(*sp_light);
 
-	light_vao->Bind();
+	//light_vao->Bind();
 
-	glDrawElements(GL_TRIANGLES, light_indi.size(), GL_UNSIGNED_INT, NULL);
+	//glDrawElements(GL_TRIANGLES, light_indi.size(), GL_UNSIGNED_INT, NULL);
 
+	//// Rysowanie particle system
+	//explosionParticles->render(*sp_particle, *camera);
 
-	// Rysowanie particle system
-	explosionParticles->render(*sp_particle, *camera);
+	// Rysowanie terenu
+	sp->use();
+	//Grass Base
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, grass_base);
+	//glUniform1i(sp->u("tex0"), 0);
+	////Grass Specular
+	//glActiveTexture(GL_TEXTURE1);
+	//glBindTexture(GL_TEXTURE_2D, grass_spec);
+	//glUniform1i(sp->u("tex1"), 0);
+	//Light and View uniforms
+	glUniform4fv(sp->u("lightColor"), 1, glm::value_ptr(lightColor));
+	glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(lightPos));
+	glUniform3fv(sp->u("viewPos"), 1, glm::value_ptr(camera->position));
+	//Model matrix
+	glm::mat4 TM = glm::mat4(1.0f);
+	TM = glm::translate(TM, glm::vec3(0.0f, -1.0f, 0.0f));
+	glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(TM));
+	//Draw terrain
+	terrain_VAO->Bind();
+	glDrawElements(GL_TRIANGLES, terrain_indi_size, GL_UNSIGNED_INT, NULL);
+
 
 
 	// Uaktywnij teksturę
 	//glActiveTexture(GL_TEXTURE0);
 	//glBindTexture(GL_TEXTURE_2D, defaultTexture);
 	//glUniform1i(sp->u("tex0"), 0);
-
-	//// Przekaż dane modelu
-	//vao->Bind();
-
-	//// Rysowanie obiektu
-	//glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, NULL);
-	//vao->Unbind();
-
-	//glDrawArrays(GL_TRIANGLES, 0, 6);  // Narysuj obiekt
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
