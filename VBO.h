@@ -2,6 +2,7 @@
 #define VBO_CLASS_H
 
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 
 class VBO {
 public:

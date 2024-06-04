@@ -23,6 +23,7 @@
     <ClInclude Include="constants.h" />
     <ClInclude Include="EBO.h" />
     <ClInclude Include="lodepng.h" />
+    <ClInclude Include="particle.h" />
     <ClInclude Include="physics.h" />
     <ClInclude Include="shaderprogram.h" />
     <ClInclude Include="myCube.h" />
@@ -37,6 +38,7 @@
     <ClCompile Include="EBO.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="main_file.cpp" />
+    <ClCompile Include="particle.cpp" />
     <ClCompile Include="shaderprogram.cpp" />
     <ClCompile Include="terrain.cpp" />
     <ClCompile Include="VAO.cpp" />
@@ -44,8 +46,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="f_light_shader.glsl" />
+    <None Include="f_particle_shader.glsl" />
     <None Include="f_shader.glsl" />
     <None Include="v_light_shader.glsl" />
+    <None Include="v_particle_shader.glsl" />
     <None Include="v_shader.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
