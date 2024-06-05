@@ -203,9 +203,6 @@ void Terrain::draw(ShaderProgram& shader, Camera& camera)
 	camera.shaderMatrix(shader, "V", "P");
 
 	glm::mat4 model = glm::mat4(1.0f);
-	//model = glm::translate(model, glm::vec3(size * triangleLength, 0.0f, -size * triangleLength));
-	//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
 	glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
 

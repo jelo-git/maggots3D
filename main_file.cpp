@@ -45,6 +45,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "tiny_obj_loader.h"
 #include "hitbox.h"
 #include "player.h"
+#include "rocket.h"
 
 #define PERSISTANCE 0.5
 #define OCTAVES 4
@@ -62,6 +63,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 Camera* camera;
 
 ParticleSystem* explosionParticles;
+
+Rocket* rocket;
 
 Terrain* terrain;
 
@@ -151,6 +154,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_A) camera->speed.z = 0;
 		if (key == GLFW_KEY_P) {
 			explosionParticles->emit(100);
+		}
+		if (key == GLFW_KEY_O) {
+			rocket->position = glm::vec3(5.0f, 5.0f, -5.0f);
+			rocket->initial_position = rocket->position;
+			rocket->setVelocity(0.0f);
+			rocket->setVerticalAngle(0.0f);
+			rocket->setHorizontalAngle(0.0f);
 		}
 	}
 }
@@ -254,7 +264,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
 
 	// Utworzenie obiektu kamery
-	camera = new Camera(800, 600, glm::vec3(0.0f, 0.0f, 4.0f));
+	camera = new Camera(800, 600, glm::vec3(5.0f, 2.0f, 0.0f));
 
 	// Utworzenie particle system
 	ParticleInfo info;
@@ -273,6 +283,13 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Wczytanie tekstur
 	terrain->texture_base = readTexture("sand.png");
 	texture = readTexture("cate.png");
+
+	// Wczytanie pocisku
+	rocket = new Rocket(5.0f, 5.0f, -5.0f, vertices, indices);
+	rocket->texture_base = texture;
+	rocket->setVelocity(0.0f);
+	rocket->setVerticalAngle(0.0f);
+	rocket->setHorizontalAngle(0.0f);
 
 	// Wczytanie gracza
 	player_VAO = new VAO();
@@ -306,6 +323,9 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	// Usunięcie particle system
 	delete explosionParticles;
 
+	// Usunięcie pocisku
+	delete rocket;
+
 	// Usunięcie terenu
 	delete terrain;
 
@@ -324,19 +344,19 @@ void drawScene(GLFWwindow* window) {
 	// Rysowanie terenu
 	terrain->draw(*sp, *camera);
 
-	//Rysowanie particle system
+	// Rysowanie particle system
 	explosionParticles->render(*sp_particle, *camera);
+
+	// Rysowanie pocisku
+	rocket->draw(*sp_particle, *camera);
+	fprintf(stdout, "Rocket position: %f %f %f\n", rocket->position.x, rocket->position.y, rocket->position.z);
 
 	// Rysowanie gracza
 	sp->use();
 	camera->shaderMatrix(*sp);
 	glm::mat4 M = glm::mat4(1.0f);
-	//M = glm::translate(M, glm::vec3(player->position.x, player->position.z, player->position.y));
 	float height = terrain->getHeight(playerPosition.x, playerPosition.y);
 	M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
-	//M = glm::scale(M, glm::vec3(0.1f, 0.1f, 0.1f));
-	//fprintf(stdout, "Player position: %f %f %f\n", player->position.x, player->position.y, player->position.z);
-	fprintf(stdout, "Player pos: %f %f %f\n", playerPosition.x, height, playerPosition.y);
 	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
 	glUniform1i(sp->u("textureBase"), 0);
 	glActiveTexture(GL_TEXTURE0);
@@ -412,13 +432,19 @@ int main(void) {
 		// Aktualizuj particle system
 		explosionParticles->update(glfwGetTime());
 
+		// Aktualizuj pocisk
+		rocket->position = rocket->getMovementCoords(glfwGetTime());
+		if (rocket->collisionHappened(*player, *terrain)) {
+			player->updateHP();
+			explosionParticles->info.position = rocket->position;
+			explosionParticles->emit(100);
+		}
 
 		//Przesuń gracza
 		playerPosition.x += speed_x * glfwGetTime();
 		playerPosition.y += speed_y * glfwGetTime();
 		//glm::vec2 value = glm::vec2(0.0f, 0.0f);
 		//player->move(value, terrain->vertices, TERRAIN_SIZE);
-		explosionParticles->info.position = player->position;
 
 		// Zeruj timer
 		glfwSetTime(0);
