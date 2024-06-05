@@ -1,4 +1,0 @@
-﻿  main_file.cpp
-D:\Code\maggots3D\main_file.cpp(206,28): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-D:\Code\maggots3D\main_file.cpp(207,28): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-  gkiw_st_12_win.vcxproj -> D:\Code\maggots3D\x64\Debug\gkiw_st_12_win.exe
