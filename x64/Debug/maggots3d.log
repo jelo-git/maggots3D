@@ -26,4 +26,9 @@ D:\Code\maggots3D\main_file.cpp(418,31): warning C4244: '+=': conversion from 'd
           [
               T=float
           ]
+  terrain.cpp
+D:\Code\maggots3D\terrain.cpp(173,15): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\terrain.cpp(174,15): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\terrain.cpp(223,49): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+  Generating Code...
   maggots3d.vcxproj -> D:\Code\maggots3D\x64\Debug\maggots3d.exe

@@ -152,21 +152,29 @@ float Terrain::barycentricInterpolation(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3
 	return l1 * p1.y + l2 * p2.y + l3 * p3.y;
 }
 
+
 float Terrain::getHeight(float x, float y)
 {
-	int row = (int)(x / triangleLength);
-	int col = (int)(y / -triangleLength);
+	y = -y;
+	// Adjust coordinates based on terrain transformations
+	// Assuming the terrain is rotated 90 degrees around Y-axis and 180 degrees around X-axis
+	// Adjust x and y to match the terrain's coordinate system
+	float adjustedX = y; // Swap x and y for 90-degree rotation around Y-axis
+	float adjustedY = -x; // Invert x for 180-degree rotation around X-axis
+
+	int row = (int)(adjustedX / triangleLength);
+	int col = (int)(adjustedY / -triangleLength);
 
 	if (row < 0 || row >= size || col < 0 || col >= size)
 	{
 		return 0.0f;
 	}
 
-	float xCoord = fmod(x, triangleLength) / triangleLength;
-	float yCoord = fmod(y, -triangleLength) / -triangleLength;
+	float xCoord = fmod(adjustedX, triangleLength) / triangleLength;
+	float yCoord = fmod(adjustedY, -triangleLength) / -triangleLength;
 
 	float height = 0.0f;
-	if (xCoord <= 1 - yCoord)
+	if (yCoord <= 1 - xCoord)
 	{
 		height = barycentricInterpolation(
 			glm::vec3(0, perlinNoise(row, col, frequency, octaves, persistence), 0),
@@ -188,6 +196,7 @@ float Terrain::getHeight(float x, float y)
 	return height;
 }
 
+
 void Terrain::draw(ShaderProgram& shader, Camera& camera)
 {
 	shader.use();
@@ -195,8 +204,8 @@ void Terrain::draw(ShaderProgram& shader, Camera& camera)
 
 	glm::mat4 model = glm::mat4(1.0f);
 	//model = glm::translate(model, glm::vec3(size * triangleLength, 0.0f, -size * triangleLength));
-	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
 	glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
 

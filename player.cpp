@@ -30,50 +30,43 @@ void Player::updateHP()
 
 void Player::move(glm::vec2& direction, std::vector<GLfloat>& plane, const int div)
 {
-	float zcoord = 0.0;
-	position += glm::vec3(direction, 0);
+	float ycoord = 0.0;
+	position += glm::vec3(direction.x, 0, direction.y);
 	for (int row = 0; row < div; row++)
 	{
 		for (int col = 0; col < div; col++)
 		{
 			int index = row * (div + 1) + col;
-
-			if (pointIsInsideTriangle(plane[3 * index], plane[3 * index + 1],
-				plane[3 * (index + (div + 1))], plane[3 * (index + (div + 1)) + 1],
-				plane[3 * (index + (div + 1) + 1)], plane[3 * (index + (div + 1) + 1) + 1],
-				position.x, position.y))
+			if (pointIsInsideTriangle(plane[3 * index], plane[3 * index + 2],
+				plane[3 * (index + (div + 1))], plane[3 * (index + (div + 1)) + 2],
+				plane[3 * (index + (div + 1) + 1)], plane[3 * (index + (div + 1) + 1) + 2],
+				position.x, position.z))
 			{
 				glm::vec3 v1(plane[3 * (index + (div + 1))] - plane[3 * index],
 					plane[3 * (index + (div + 1)) + 1] - plane[3 * index + 1],
 					plane[3 * (index + (div + 1)) + 2] - plane[3 * index + 2]);
-
 				glm::vec3 v2(plane[3 * (index + (div + 1) + 1)] - plane[3 * index],
 					plane[3 * (index + (div + 1) + 1) + 1] - plane[3 * index + 1],
 					plane[3 * (index + (div + 1) + 1) + 2] - plane[3 * index + 2]);
-
-				glm::vec2 t(position.x - plane[3 * index], position.y - plane[3 * index + 1]);
-
-				zcoord = getZCoordInsideTriangle(v1, v2, t, position.z - plane[3 * index + 2]);
-				position += glm::vec3(0, 0, zcoord);
+				glm::vec2 t(position.x - plane[3 * index], position.z - plane[3 * index + 2]);
+				ycoord = getZCoordInsideTriangle(v1, v2, t, position.y - plane[3 * index + 1]);
+				position += glm::vec3(0, ycoord, 0);
 				return;
 			}
-			else if (pointIsInsideTriangle(plane[3 * index], plane[3 * index + 1],
-				plane[3 * (index + 1)], plane[3 * (index + 1) + 1],
-				plane[3 * (index + (div + 1) + 1)], plane[3 * (index + (div + 1) + 1) + 1],
-				position.x, position.y))
+			else if (pointIsInsideTriangle(plane[3 * index], plane[3 * index + 2],
+				plane[3 * (index + 1)], plane[3 * (index + 1) + 2],
+				plane[3 * (index + (div + 1) + 1)], plane[3 * (index + (div + 1) + 1) + 2],
+				position.x, position.z))
 			{
 				glm::vec3 v1(plane[3 * (index + (div + 1) + 1)] - plane[3 * index],
 					plane[3 * (index + (div + 1) + 1) + 1] - plane[3 * index + 1],
 					plane[3 * (index + (div + 1) + 1) + 2] - plane[3 * index + 2]);
-
 				glm::vec3 v2(plane[3 * (index + 1)] - plane[3 * index],
 					plane[3 * (index + 1) + 1] - plane[3 * index + 1],
 					plane[3 * (index + 1) + 2] - plane[3 * index + 2]);
-
-				glm::vec2 t(position.x - plane[3 * index], position.y - plane[3 * index + 1]);
-
-				zcoord = getZCoordInsideTriangle(v1, v2, t, position.z - plane[3 * index + 2]);
-				position += glm::vec3(0, 0, zcoord);
+				glm::vec2 t(position.x - plane[3 * index], position.z - plane[3 * index + 2]);
+				ycoord = getZCoordInsideTriangle(v1, v2, t, position.y - plane[3 * index + 1]);
+				position += glm::vec3(0, ycoord, 0);
 				return;
 			}
 		}
@@ -94,9 +87,9 @@ bool Player::pointIsInsideTriangle(float x1, float y1, float x2, float y2, float
 	return (A == A1 + A2 + A3);
 }
 
-float Player::getZCoordInsideTriangle(glm::vec3& v1, glm::vec3& v2, glm::vec2& t, float norm_zcoord)
+float Player::getZCoordInsideTriangle(glm::vec3& v1, glm::vec3& v2, glm::vec2& t, float norm_ycoord)
 {
 	glm::vec3 norm = glm::cross(v1, v2);
 
-	return norm_zcoord + (norm.x * t.x + norm.y * t.y) / norm.z;
+	return norm_ycoord + (norm.x * t.x + norm.z * t.y) / norm.y;
 }

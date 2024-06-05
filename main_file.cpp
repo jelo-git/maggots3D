@@ -290,7 +290,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	player_VAO->Unbind();
 	ebo.Unbind();
 
-	player = new Player(playerPosition.x, -playerPosition.y, 0.0f, vertices);
+	player = new Player(playerPosition.x, playerPosition.y, 0.0f, vertices);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -331,10 +331,10 @@ void drawScene(GLFWwindow* window) {
 	sp->use();
 	camera->shaderMatrix(*sp);
 	glm::mat4 M = glm::mat4(1.0f);
-	//M = glm::translate(M, player->position);
-	float height = -terrain->getHeight(playerPosition.x, playerPosition.y);
+	//M = glm::translate(M, glm::vec3(player->position.x, player->position.z, player->position.y));
+	float height = terrain->getHeight(playerPosition.x, playerPosition.y);
 	M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
-	M = glm::scale(M, glm::vec3(0.1f, 0.1f, 0.1f));
+	//M = glm::scale(M, glm::vec3(0.1f, 0.1f, 0.1f));
 	//fprintf(stdout, "Player position: %f %f %f\n", player->position.x, player->position.y, player->position.z);
 	fprintf(stdout, "Player pos: %f %f %f\n", playerPosition.x, height, playerPosition.y);
 	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
@@ -416,9 +416,9 @@ int main(void) {
 		//Przesuń gracza
 		playerPosition.x += speed_x * glfwGetTime();
 		playerPosition.y += speed_y * glfwGetTime();
-
-		//player->move(playerPosition, terrain->vertices, TERRAIN_SIZE);
-		explosionParticles->info.position = glm::vec3(playerPosition.x, 0.0f, playerPosition.y);
+		//glm::vec2 value = glm::vec2(0.0f, 0.0f);
+		//player->move(value, terrain->vertices, TERRAIN_SIZE);
+		explosionParticles->info.position = player->position;
 
 		// Zeruj timer
 		glfwSetTime(0);
