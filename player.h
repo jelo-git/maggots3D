@@ -5,29 +5,24 @@
 #include <GL/glew.h>
 #include <vector>
 
+#include "VAO.h"
+#include "EBO.h"
 #include "hitbox.h"
 
 class Player
 {
 public:
-	const GLuint damage = 100;
-
 	glm::vec3 position;
-	GLuint hp;
-	bool is_active;
+	int hp;
 	Hitbox hitbox;
 
-	Player(GLfloat x, GLfloat y, GLfloat z, std::vector<GLfloat>& vertices);
+	// VAO
+	VAO vao;
+	GLuint indices_size;
 
-	//void attack(GLfloat rocket_initial_velocity, GLfloat vertical_angle, GLfloat horizontal_angle);
-	void move(glm::vec2& direction, std::vector<GLfloat>& plane, const int div);
-	void updateHP();
-	void newTurn();
+	Player(glm::vec3 startPosition, int hp, std::vector<GLfloat>& vertices, std::vector<GLuint>& indices);
 
-private:
-	float areaOfTriangle(float x1, float y1, float x2, float y2, float x3, float y3);
-	bool pointIsInsideTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float x, float y);
-	float getZCoordInsideTriangle(glm::vec3& v1, glm::vec3& v2, glm::vec2& t, float norm_zcoord);
+	void updateHP(int damage);
 };
 
 #endif // !PLAYER_H

@@ -68,9 +68,9 @@ Rocket* rocket;
 
 Terrain* terrain;
 
-Player* player;
-VAO* player_VAO;
-glm::vec2 playerPosition = glm::vec2(2.0f, -2.0f);
+Player* player1;
+Player* player2;
+
 GLuint texture;
 
 ShaderProgram* sp;
@@ -292,22 +292,12 @@ void initOpenGLProgram(GLFWwindow* window) {
 	rocket->setHorizontalAngle(0.0f);
 
 	// Wczytanie gracza
-	player_VAO = new VAO();
-	player_VAO->Bind();
-	VBO vbo = VBO(vertices.data(), vertices.size() * sizeof(GLfloat));
-	VBO vboNormals = VBO(normals.data(), normals.size() * sizeof(GLfloat));
-	VBO vboTexCoords = VBO(texCoords.data(), texCoords.size() * sizeof(GLfloat));
-	EBO ebo = EBO(indices.data(), indices.size() * sizeof(GLuint));
-	player_VAO->LinkAttrib(&vbo, 0, 3, GL_FLOAT, 0, (void*)0);
-	player_VAO->LinkAttrib(&vboNormals, 1, 3, GL_FLOAT, 0, (void*)0);
-	player_VAO->LinkAttrib(&vboTexCoords, 2, 2, GL_FLOAT, 0, (void*)0);
-	vbo.Unbind();
-	vboNormals.Unbind();
-	vboTexCoords.Unbind();
-	player_VAO->Unbind();
-	ebo.Unbind();
-
-	player = new Player(playerPosition.x, playerPosition.y, 0.0f, vertices);
+	glm::vec2 pos = glm::vec2(TERRAIN_SIZE / 2, -0.1f * TERRAIN_SIZE);
+	glm::vec3 spawn = glm::vec3(pos.x, terrain->getHeight(pos.x, pos.y), pos.y);
+	player1 = new Player(spawn, 3, vertices, indices);
+	pos = glm::vec2(TERRAIN_SIZE / 2, -0.9f * TERRAIN_SIZE);
+	spawn = glm::vec3(pos.x, terrain->getHeight(pos.x, pos.y), pos.y);
+	player2 = new Player(spawn, 3, vertices, indices);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -330,7 +320,8 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	delete terrain;
 
 	// Usunięcie gracza
-	delete player;
+	delete player1;
+	delete player2;
 }
 
 // Procedura rysująca zawartość sceny
@@ -352,26 +343,41 @@ void drawScene(GLFWwindow* window) {
 	fprintf(stdout, "Rocket position: %f %f %f\n", rocket->position.x, rocket->position.y, rocket->position.z);
 
 	// Rysowanie gracza
-	sp->use();
-	camera->shaderMatrix(*sp);
-	glm::mat4 M = glm::mat4(1.0f);
-	float height = terrain->getHeight(playerPosition.x, playerPosition.y);
-	M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
-	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-	glUniform1i(sp->u("textureBase"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	player_VAO->Bind();
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
-	player_VAO->Unbind();
+	//sp->use();
+	//camera->shaderMatrix(*sp);
+	//glm::mat4 M = glm::mat4(1.0f);
+	//float height = terrain->getHeight(playerPosition.x, playerPosition.y);
+	//M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
+	//glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+	//glUniform1i(sp->u("textureBase"), 0);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, texture);
+	//player_VAO->Bind();
+	//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
+	//player_VAO->Unbind();
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
 }
 
-int main(void) {
-	GLFWwindow* window;
+void printFPS() {
+	static float avg_fps = 0;
+	static float time = 0;
+	static float frames = 0;
 
+	frames++;
+	time += glfwGetTime();
+
+	if (time >= 1.0 / 4.0) {
+		avg_fps = (avg_fps + frames / time) / 2;
+		float ms = time / frames * 1000.0;
+		fprintf(stdout, "AVG FPS: %f, ms: %f\n", avg_fps, ms);
+		time = 0;
+		frames = 0;
+	}
+}
+
+GLFWwindow* inits() {
 	// Zarejestruj procedurę obsługi błędów
 	glfwSetErrorCallback(error_callback);
 
@@ -382,7 +388,7 @@ int main(void) {
 	}
 
 	// Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
-	window = glfwCreateWindow(800, 600, "Maggots3D", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(800, 600, "Maggots3D", NULL, NULL);
 
 	// Jeżeli okna nie udało się utworzyć, to zamknij program
 	if (!window)
@@ -407,24 +413,31 @@ int main(void) {
 	// Operacje inicjujące
 	initOpenGLProgram(window);
 
+	return window;
+}
+void terminates(GLFWwindow* window) {
+	// Zwolnij zasoby zajęte przez program
+	freeOpenGLProgram(window);
+
+	// Usuń kontekst OpenGL i okno
+	glfwDestroyWindow(window);
+
+	// Zwolnij zasoby zajęte przez GLFW
+	glfwTerminate();
+	exit(EXIT_SUCCESS);
+}
+
+int main(void) {
+	// Inicjalizacja
+	GLFWwindow* window = inits();
+
 	// Główna pętla
-	float time = 0;
-	float frames = 0;
-	float avg_fps = 0;
 	glfwSetTime(0);
 
 	while (!glfwWindowShouldClose(window))
 	{
 		// Oblicz liczbę klatek na sekundę
-		frames++;
-		time += glfwGetTime();
-		if (time >= 1.0 / 4.0) {
-			avg_fps = (avg_fps + frames / time) / 2;
-			float ms = time / frames * 1000.0;
-			fprintf(stdout, "AVG FPS: %f, ms: %f\n", avg_fps, ms);
-			time = 0;
-			frames = 0;
-		}
+		printFPS();
 
 		// Przesuń kamerę
 		camera->move(glfwGetTime());
@@ -433,18 +446,17 @@ int main(void) {
 		explosionParticles->update(glfwGetTime());
 
 		// Aktualizuj pocisk
-		rocket->position = rocket->getMovementCoords(glfwGetTime());
+		/*rocket->position = rocket->getMovementCoords(glfwGetTime());
 		if (rocket->collisionHappened(*player, *terrain)) {
 			player->updateHP();
 			explosionParticles->info.position = rocket->position;
 			explosionParticles->emit(100);
-		}
+		}*/
 
 		//Przesuń gracza
-		playerPosition.x += speed_x * glfwGetTime();
-		playerPosition.y += speed_y * glfwGetTime();
-		//glm::vec2 value = glm::vec2(0.0f, 0.0f);
-		//player->move(value, terrain->vertices, TERRAIN_SIZE);
+		player1->position.x += speed_x * glfwGetTime();
+		player1->position.y += speed_y * glfwGetTime();
+		player1->position.z = terrain->getHeight(player1->position.x, player1->position.z);
 
 		// Zeruj timer
 		glfwSetTime(0);
@@ -456,13 +468,6 @@ int main(void) {
 		glfwPollEvents();
 	}
 
-	// Zwolnij zasoby zajęte przez program
-	freeOpenGLProgram(window);
-
-	// Usuń kontekst OpenGL i okno
-	glfwDestroyWindow(window);
-
-	// Zwolnij zasoby zajęte przez GLFW
-	glfwTerminate();
-	exit(EXIT_SUCCESS);
+	// Zwolnij zasoby zajęte przez program i zakoncz działanie
+	terminates(window);
 }
