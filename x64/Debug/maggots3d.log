@@ -1,0 +1,20 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(531,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (gkiw_st_12_win.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  main_file.cpp
+D:\Code\maggots3D\physics.h(22,25): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Code\maggots3D\main_file.cpp(117,29): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\main_file.cpp(117,25): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\main_file.cpp(225,36): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
+          with
+          [
+              _Ty=GLuint
+          ]
+D:\Code\maggots3D\main_file.cpp(237,27): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
+D:\Code\maggots3D\main_file.cpp(237,21): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
+D:\Code\maggots3D\main_file.cpp(237,15): warning C4305: 'argument': truncation from 'double' to 'GLclampf'
+D:\Code\maggots3D\main_file.cpp(269,71): warning C4305: 'argument': truncation from 'double' to 'float'
+D:\Code\maggots3D\main_file.cpp(269,55): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+D:\Code\maggots3D\main_file.cpp(334,43): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+D:\Code\maggots3D\main_file.cpp(389,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\main_file.cpp(392,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\Code\maggots3D\main_file.cpp(402,41): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  maggots3d.vcxproj -> D:\Code\maggots3D\x64\Debug\maggots3d.exe
