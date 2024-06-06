@@ -81,6 +81,8 @@ ShaderProgram* sp_particle;
 float speed_x = 0;
 float speed_y = 0;
 
+glm::vec3 wind(0.0f);
+
 // Plaszczyzna 2D
 std::vector<GLfloat> vertices = {
 	-1.0f, -1.0f, 0.0f,
@@ -249,6 +251,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
 	glClearColor(0.13, 0.13, 0.13, 1);
 	glEnable(GL_DEPTH_TEST);
+	srand(time(NULL));
 
 	// Ustawienie cullface
 	//glEnable(GL_CULL_FACE);
@@ -298,8 +301,8 @@ void initOpenGLProgram(GLFWwindow* window) {
 	rocket = new Rocket(2.0f, 2.0f, -5.0f, rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices);
 	GLuint rocket_base = readTexture("models/missile_base.png");
 	rocket->texture_base = rocket_base;
-	rocket->setVelocity(1.0f);
-	rocket->setVerticalAngle(0.0f);
+	rocket->setVelocity(5.0f);
+	rocket->setVerticalAngle(40.0f);
 	rocket->setHorizontalAngle(0.0f);
 
 	// Wczytanie gracza
@@ -322,6 +325,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	player2 = new Player(spawn, 3, player_vertices, player_normals, player_texCoords, player_indices);
 	player2->texture_base = player_tex;
 	player2->rotation = glm::radians(180.0f);
+
+	wind.x = (rand() % 2 ? -1 : 1) * rand() % 30 / 10;
+	wind.z = (rand() % 2 ? -1 : 1) * rand() % 30 / 10;
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -471,18 +477,17 @@ int main(void) {
 		explosionParticles->update(glfwGetTime());
 
 		// Aktualizuj pocisk
-		rocket->position = rocket->getMovementCoords(glfwGetTime());
+		rocket->position = rocket->getMovementCoords(glfwGetTime()) + rocket->time * wind;
 		if (rocket->collisionHappened(*terrain)) {
 			explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
 			explLightStrength = 1.0f;
-
 			explosionParticles->info.position = rocket->position;
 			explosionParticles->emit(100);
 			rocket->time = 0;
 			rocket->position = glm::vec3(2.0f, 2.0f, -5.0f);
 			rocket->initial_position = rocket->position;
-			rocket->setVelocity(1.0f);
-			rocket->setVerticalAngle(0.0f);
+			rocket->setVelocity(5.0f);
+			rocket->setVerticalAngle(40.0f);
 			rocket->setHorizontalAngle(0.0f);
 		}
 
