@@ -106,6 +106,8 @@ bool firing = false;
 bool fired = false;
 bool flying = false;
 
+glm::vec3 wind(0.0f);
+
 // Plaszczyzna 2D
 std::vector<GLfloat> vertices = {
 	-1.0f, -1.0f, 0.0f,
@@ -537,7 +539,7 @@ void playerStuff(Player* p, Bazooka* b) {
 
 void explosionEffect(Rocket* r, ParticleSystem* p) {
 	explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
-	explLightStrength = 1.0f;
+	explLightStrength = 3.0f;
 	explosionParticles->info.position = rocket->position;
 	explosionParticles->emit(100);
 }
@@ -677,7 +679,7 @@ int main(void) {
 				}
 			}
 			else {
-				rocket->updatePosition(glfwGetTime());
+				rocket->updatePosition(glfwGetTime(), wind);
 
 				if (rocket->collisionHappened(*terrain)) {
 					explosionEffect(rocket, explosionParticles);
@@ -708,7 +710,7 @@ int main(void) {
 
 		// Aktualizuj moc eksplozji
 		if (explLightStrength > 0) {
-			explLightStrength -= 1.0f * glfwGetTime();
+			explLightStrength -= 3.0f * glfwGetTime();
 		}
 		if (explLightStrength < 0)
 		{

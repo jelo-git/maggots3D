@@ -65,7 +65,6 @@ void Rocket::draw(ShaderProgram& shader, Camera& camera, glm::vec3& explPos, flo
 	model = glm::translate(model, this->position);
 	model = glm::rotate(model, -yaw, glm::vec3(0.0f, 1.0f, 0.0f));
 	model = glm::rotate(model, pitch, glm::vec3(0.0f, 0.0f, 1.0f));
-	//model = glm::translate(model, glm::vec3(0.5f, 0.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
 
 	glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
