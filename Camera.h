@@ -9,6 +9,8 @@
 #include "shaderprogram.h"
 
 class Camera {
+private:
+	float zoom;
 public:
 	glm::vec3 position;
 	glm::vec3 facing;
@@ -33,6 +35,10 @@ public:
 
 	void updateMatrix(float fov, float near, float far);
 	void shaderMatrix(ShaderProgram& shader, const char* view = "V", const char* projection = "P");
+
+	void followPlayer(glm::vec3 playerPos);
+	void rotateAroundPlayer(glm::vec3 playerPos, float yaw, float pitch);
+	void setZoom(float zoom);
 
 	void rotate(GLFWwindow* window, float yaw, float pitch);
 	void move(double dt);

@@ -3,15 +3,8 @@
 #define GRAVITY_ACC 9.8f
 #define PROXIMITY 0.5f
 
-Rocket::Rocket(GLfloat x, GLfloat y, GLfloat z, std::vector<GLfloat>& vertices, std::vector<GLfloat>& normals, std::vector<GLfloat>& texCoords, std::vector<GLuint>& indices)
+Rocket::Rocket(std::vector<GLfloat>& vertices, std::vector<GLfloat>& normals, std::vector<GLfloat>& texCoords, std::vector<GLuint>& indices)
 {
-	this->position = glm::vec3(x, y, z);
-	this->initial_position = glm::vec3(x, y, z);
-	this->initial_velocity = 0.0;
-	this->horizontal_angle = 0.0;
-	this->vertical_angle = 0.0;
-	this->time = 0.0;
-
 	this->indices_size = indices.size();
 	// Create VAO for rendering
 	this->vao = VAO();
@@ -34,43 +27,23 @@ Rocket::Rocket(GLfloat x, GLfloat y, GLfloat z, std::vector<GLfloat>& vertices, 
 	ebo.Unbind();
 }
 
-GLfloat Rocket::getSlopeAngle()
+void Rocket::spawn(glm::vec3 position, GLfloat speed, GLfloat yaw, GLfloat pitch)
 {
-	float v0y = initial_velocity * glm::sin(glm::radians(vertical_angle));
-	return glm::atan(v0y - GRAVITY_ACC * this->time);
+	this->position = position;
+	this->speed = glm::vec3(speed * glm::cos(glm::radians(yaw)) * glm::cos(glm::radians(pitch)),
+		speed * glm::sin(glm::radians(pitch)),
+		speed * glm::sin(glm::radians(yaw)) * glm::cos(glm::radians(pitch)));
+	this->yaw = yaw;
+	this->pitch = pitch;
 }
 
-glm::vec3 Rocket::getMovementCoords(float deltaTime)
+void Rocket::updatePosition(float deltaTime, glm::vec3 wind)
 {
-	GLfloat x, y, z;
-	this->time += deltaTime;
-
-	float velocity_x0 = initial_velocity * glm::cos(glm::radians(vertical_angle)) * glm::cos(glm::radians(horizontal_angle));
-	float velocity_z0 = initial_velocity * glm::sin(glm::radians(vertical_angle)) * glm::sin(glm::radians(horizontal_angle));
-	float velocity_y0 = initial_velocity * glm::sin(glm::radians(vertical_angle));
-
-	x = velocity_x0 * this->time;
-	y = velocity_y0 * this->time - GRAVITY_ACC * pow(this->time, 2) / 2;
-	z = velocity_z0 * this->time;
-
-	getSlopeAngle();
-
-	return glm::vec3(x, y, z) + initial_position;
-}
-
-void Rocket::setVelocity(GLfloat initial_velocity)
-{
-	this->initial_velocity = initial_velocity;
-}
-
-void Rocket::setVerticalAngle(GLfloat vertical_angle)
-{
-	this->vertical_angle = vertical_angle;
-}
-
-void Rocket::setHorizontalAngle(GLfloat horizontal_angle)
-{
-	this->horizontal_angle = horizontal_angle;
+	glm::vec3 acceleration = glm::vec3(wind.x, wind.y - GRAVITY_ACC, wind.z);
+	this->speed += acceleration * deltaTime;
+	this->position += this->speed * deltaTime;
+	this->yaw = glm::atan(this->speed.z, this->speed.x);
+	this->pitch = glm::asin(this->speed.y / glm::length(this->speed));
 }
 
 bool Rocket::collisionHappened(Player& player)
@@ -83,11 +56,6 @@ bool Rocket::collisionHappened(Terrain& terrain)
 	return (this->position.y <= terrain.getHeight(this->position.x, this->position.z));
 }
 
-void Rocket::collisionEvent()
-{
-	this->time = 0.0;
-}
-
 void Rocket::draw(ShaderProgram& shader, Camera& camera, glm::vec3& explPos, float explLightStrength)
 {
 	shader.use();
@@ -95,8 +63,9 @@ void Rocket::draw(ShaderProgram& shader, Camera& camera, glm::vec3& explPos, flo
 
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, this->position);
-	model = glm::rotate(model, this->getSlopeAngle(), glm::vec3(0.0f, 0.0f, 1.0f));
-	model = glm::translate(model, glm::vec3(0.5f, 0.0f, 0.0f));
+	model = glm::rotate(model, -yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::rotate(model, pitch, glm::vec3(0.0f, 0.0f, 1.0f));
+	//model = glm::translate(model, glm::vec3(0.5f, 0.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
 
 	glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));

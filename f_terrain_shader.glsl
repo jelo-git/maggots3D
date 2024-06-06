@@ -47,13 +47,14 @@ vec4 directLight(){
 	float diff = max(dot(normal, lightSource), 0.0);
 
 	// specular
-	float spec = 0.0;
-	if(diff != 0.0){
+	//float spec = 0.0;
+	//if(diff != 0.0){
 		float specularStrength = 0.4;
 		vec3 viewDir = normalize(viewPos-iPosition);
-		vec3 halfdir = normalize(viewDir+lightSource);
+		//vec3 halfdir = normalize(viewDir+lightSource);
+		vec3 halfdir = reflect(-lightSource, normal);
 		float spec = pow(max(dot(viewDir, halfdir), 0.0), 8) * specularStrength;
-	}
+	//}
 
 	// combine results
 	return (texture(textureBase, iTexCoord) * lightColor * (diff + ambient + spec));

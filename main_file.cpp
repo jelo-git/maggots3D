@@ -45,16 +45,22 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "tiny_obj_loader.h"
 #include "player.h"
 #include "rocket.h"
+#include "bazooka.h"
 
 #define PERSISTANCE 0.5
 #define OCTAVES 4
 #define FREQUENCY 0.3
-#define TERRAIN_SIZE 10
-#define TERRAIN_DENSITY 1.0
+#define TERRAIN_SIZE 20
+#define TERRAIN_DENSITY 0.1
 #define TERRAIN_HEIGHT 1.0 //bigger is flatter
 
 #define ALPHA_ANGLE 89.0
 #define BETA_ANGLE 0.0
+
+#define BAZOOKA_PITCH_SPEED PI/8 
+#define BAZOOKA_POWER 10.0
+
+#define CAM_COUNTDOWN 2.0
 
 
 #define VSYNC 0 //1 - włączony, 0 - wyłączony
@@ -72,6 +78,9 @@ Terrain* terrain;
 Player* player1;
 Player* player2;
 
+Bazooka* bazooka1;
+Bazooka* bazooka2;
+
 GLuint texture;
 
 ShaderProgram* sp;
@@ -80,6 +89,22 @@ ShaderProgram* sp_particle;
 
 float speed_x = 0;
 float speed_y = 0;
+
+float cam_switch_countdown = CAM_COUNTDOWN;
+
+float player_rotate_speed = 0;
+
+float bazooka_pitch = 0;
+float bazooka_pitch_speed = BAZOOKA_PITCH_SPEED;
+
+bool player1_turn = true;
+bool firstPersonCamera = false;
+bool shiftPressed = false;
+bool controlPressed = false;
+bool enteredGameWindow = false;
+bool firing = false;
+bool fired = false;
+bool flying = false;
 
 // Plaszczyzna 2D
 std::vector<GLfloat> vertices = {
@@ -111,6 +136,7 @@ void error_callback(int error, const char* description) {
 }
 
 void mousePosCallback(GLFWwindow* window, double x, double y) {
+	if (!enteredGameWindow) return;
 	static double lastX = 0;
 	static double lastY = 0;
 
@@ -120,7 +146,32 @@ void mousePosCallback(GLFWwindow* window, double x, double y) {
 	lastX = x;
 	lastY = y;
 
-	camera->rotate(window, dx, dy);
+	if (firstPersonCamera) {
+		camera->rotate(window, dx, dy);
+	}
+	else {
+		if (flying) {
+			camera->rotateAroundPlayer(rocket->position, dx, dy);
+		}
+		else if (player1_turn) {
+			camera->rotateAroundPlayer(player1->position, dx, dy);
+		}
+		else {
+			camera->rotateAroundPlayer(player2->position, dx, dy);
+		}
+	}
+}
+
+void mouseBtnCallback(GLFWwindow* window, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		enteredGameWindow = true;
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPos(window, camera->width / 2, camera->height / 2);
+	}
+}
+
+void scrollCallback(GLFWwindow* window, double x, double y) {
+	camera->setZoom(y);
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -130,14 +181,69 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_UP) speed_y = -PI / 2;
 		if (key == GLFW_KEY_DOWN) speed_y = PI / 2;
 		if (key == GLFW_KEY_SPACE) {
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			glfwSetCursorPos(window, camera->width / 2, camera->height / 2);
-			glfwSetCursorPosCallback(window, mousePosCallback);
+			firstPersonCamera = true;
 		}
-		if (key == GLFW_KEY_W) camera->speed.x = PI;
-		if (key == GLFW_KEY_S) camera->speed.x = -PI;
-		if (key == GLFW_KEY_D) camera->speed.z = PI;
-		if (key == GLFW_KEY_A) camera->speed.z = -PI;
+		if (key == GLFW_KEY_W) {
+			if (firstPersonCamera) {
+				camera->speed.x = PI;
+				if (shiftPressed) {
+					camera->speed.x *= 3.0f;
+					if (controlPressed) {
+						camera->speed.x *= 3.0f;
+					}
+				}
+			}
+		}
+		if (key == GLFW_KEY_S) {
+			if (firstPersonCamera) {
+				camera->speed.x = -PI;
+				if (shiftPressed) {
+					camera->speed.x *= 3.0f;
+					if (controlPressed) {
+						camera->speed.x *= 3.0f;
+					}
+				}
+			}
+		}
+		if (key == GLFW_KEY_D) {
+			if (firstPersonCamera) {
+				camera->speed.z = PI;
+				if (shiftPressed) {
+					camera->speed.z *= 3.0f;
+					if (controlPressed) {
+						camera->speed.z *= 3.0f;
+					}
+				}
+			}
+		}
+		if (key == GLFW_KEY_A) {
+			if (firstPersonCamera) {
+				camera->speed.z = -PI;
+				if (shiftPressed) {
+					camera->speed.z *= 3.0f;
+					if (controlPressed) {
+						camera->speed.z *= 3.0f;
+					}
+				}
+			}
+		}
+
+		if (key == GLFW_KEY_LEFT_SHIFT) {
+			shiftPressed = !shiftPressed;
+		}
+		if (key == GLFW_KEY_LEFT_CONTROL) {
+			controlPressed = !controlPressed;
+		}
+		if (key == GLFW_KEY_ENTER) {
+			firing = true;
+			fired = false;
+		}
+		if (key == GLFW_KEY_K) {
+			player_rotate_speed = PI / 8;
+		}
+		if (key == GLFW_KEY_L) {
+			player_rotate_speed = -PI / 8;
+		}
 	}
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_KEY_LEFT) speed_x = 0;
@@ -145,23 +251,30 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_UP) speed_y = 0;
 		if (key == GLFW_KEY_DOWN) speed_y = 0;
 		if (key == GLFW_KEY_SPACE) {
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			glfwSetCursorPosCallback(window, NULL);
-			camera->firstMouse = true;
+			firstPersonCamera = false;
 		}
 		if (key == GLFW_KEY_W) camera->speed.x = 0;
 		if (key == GLFW_KEY_S) camera->speed.x = 0;
 		if (key == GLFW_KEY_D) camera->speed.z = 0;
 		if (key == GLFW_KEY_A) camera->speed.z = 0;
-		if (key == GLFW_KEY_P) {
-			explosionParticles->emit(100);
+		if (key == GLFW_KEY_ESCAPE) {
+			camera->firstMouse = true;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			enteredGameWindow = false;
 		}
-		if (key == GLFW_KEY_O) {
-			rocket->position = glm::vec3(5.0f, 5.0f, -5.0f);
-			rocket->initial_position = rocket->position;
-			rocket->setVelocity(0.0f);
-			rocket->setVerticalAngle(0.0f);
-			rocket->setHorizontalAngle(0.0f);
+		if (key == GLFW_KEY_ENTER) {
+			firing = false;
+			fired = true;
+		}
+		if (key == GLFW_KEY_K) {
+			player_rotate_speed = 0;
+		}
+		if (key == GLFW_KEY_L) {
+			player_rotate_speed = 0;
+		}
+
+		if (key == GLFW_KEY_P) {
+			rocket->spawn(glm::vec3(0.0f, 2.0f, 0.0f), 10.0f, -90.0f, 45.0f);
 		}
 	}
 }
@@ -258,6 +371,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
 	glfwSetKeyCallback(window, keyCallback);
+	glfwSetCursorPosCallback(window, mousePosCallback);
+	glfwSetMouseButtonCallback(window, mouseBtnCallback);
+	glfwSetScrollCallback(window, scrollCallback);
 
 	// Wczytanie programu cieniującego upostępnionego przez prowadzącego
 	sp = new ShaderProgram("v_terrain_shader.glsl", NULL, "f_terrain_shader.glsl");
@@ -265,7 +381,8 @@ void initOpenGLProgram(GLFWwindow* window) {
 	sp_particle = new ShaderProgram("v_particle_shader.glsl", NULL, "f_particle_shader.glsl");
 
 	// Utworzenie obiektu kamery
-	camera = new Camera(800, 600, glm::vec3(5.0f, 2.0f, 0.0f));
+	camera = new Camera(800, 600, glm::vec3(0.0f, 8.0f, 0.0f));
+	camera->facing = glm::vec3(TERRAIN_SIZE / 2, -16.0f, -TERRAIN_SIZE / 2);
 
 	// Utworzenie particle system
 	ParticleInfo info;
@@ -295,12 +412,10 @@ void initOpenGLProgram(GLFWwindow* window) {
 	if (!readModel("models/Missile.obj", rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices)) {
 		fprintf(stderr, "Nie można wczytać modelu pocisku\n");
 	}
-	rocket = new Rocket(2.0f, 2.0f, -5.0f, rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices);
+	rocket = new Rocket(rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices);
 	GLuint rocket_base = readTexture("models/missile_base.png");
 	rocket->texture_base = rocket_base;
-	rocket->setVelocity(1.0f);
-	rocket->setVerticalAngle(0.0f);
-	rocket->setHorizontalAngle(0.0f);
+	rocket->spawn(glm::vec3(0.0f, 2.0f, 0.0f), 10.0f, 0.0f, 0.0f);
 
 	// Wczytanie gracza
 	glm::vec2 pos = glm::vec2(TERRAIN_SIZE / 2, -0.1f * TERRAIN_SIZE);
@@ -321,7 +436,23 @@ void initOpenGLProgram(GLFWwindow* window) {
 	spawn = glm::vec3(pos.x, terrain->getHeight(pos.x, pos.y), pos.y);
 	player2 = new Player(spawn, 3, player_vertices, player_normals, player_texCoords, player_indices);
 	player2->texture_base = player_tex;
-	player2->rotation = glm::radians(180.0f);
+
+	// Wczytanie bazooki
+	std::vector<GLfloat> bazooka_vertices;
+	std::vector<GLfloat> bazooka_normals;
+	std::vector<GLfloat> bazooka_texCoords;
+	std::vector<GLuint> bazooka_indices;
+	if (!readModel("models/bazooka.obj", bazooka_vertices, bazooka_normals, bazooka_texCoords, bazooka_indices)) {
+		fprintf(stderr, "Nie można wczytać modelu bazooki\n");
+	}
+	bazooka1 = new Bazooka(player1->position, bazooka_vertices, bazooka_normals, bazooka_texCoords, bazooka_indices);
+	GLuint bazooka_tex = readTexture("models/bazooka_base.png");
+	bazooka1->texture_base = bazooka_tex;
+	bazooka2 = new Bazooka(player2->position, bazooka_vertices, bazooka_normals, bazooka_texCoords, bazooka_indices);
+	bazooka2->texture_base = bazooka_tex;
+
+
+	fprintf(stdout, "Player 1 & 2 hp: %d\n", 3);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -346,18 +477,65 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	// Usunięcie gracza
 	delete player1;
 	delete player2;
+
+	// Usunięcie bazooki
+	delete bazooka1;
+	delete bazooka2;
 }
 
-void movePlayer(Player* p) {
+void movePlayer(Player* p, Bazooka* b) {
 	//Przesuń gracza
 	float x = speed_x * glfwGetTime();
 	float y = speed_y * glfwGetTime();
+	if (!player1_turn) {
+		x *= -1;
+		y *= -1;
+	}
 	if (x != 0 || y != 0) {
 		p->rotation = atan2(x, y);
 	}
 	p->position.x += x;
 	p->position.z += y;
 	p->position.y = terrain->getHeight(p->position.x, p->position.z);
+
+	p->rotation += player_rotate_speed * glfwGetTime();
+
+	b->position = p->position;
+	b->yaw = p->rotation;
+}
+
+void playerStuff(Player* p, Bazooka* b) {
+	movePlayer(p, b);
+	if (enteredGameWindow && !firstPersonCamera) {
+		if (flying) camera->followPlayer(rocket->position);
+		else camera->followPlayer(p->position);
+	}
+	if (firing) {
+		b->pitch += bazooka_pitch_speed * glfwGetTime();
+		if (b->pitch > glm::radians(89.0f)) {
+			b->pitch = glm::radians(89.0f);
+			bazooka_pitch_speed = -BAZOOKA_PITCH_SPEED;
+		}
+		if (b->pitch < glm::radians(0.0f)) {
+			b->pitch = glm::radians(0.0f);
+			bazooka_pitch_speed = BAZOOKA_PITCH_SPEED;
+		}
+	}
+	if (fired) {
+		glm::vec3 offset = glm::vec3(0.0f,
+			1.0f,
+			0.0f);
+		rocket->spawn(b->position + offset, BAZOOKA_POWER, glm::degrees(-b->yaw) + 90.0f, glm::degrees(b->pitch));
+		fired = false;
+		flying = true;
+	}
+}
+
+void explosionEffect(Rocket* r, ParticleSystem* p) {
+	explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
+	explLightStrength = 1.0f;
+	explosionParticles->info.position = rocket->position;
+	explosionParticles->emit(100);
 }
 
 // Procedura rysująca zawartość sceny
@@ -375,7 +553,12 @@ void drawScene(GLFWwindow* window) {
 	explosionParticles->render(*sp_particle, *camera);
 
 	// Rysowanie pocisku
-	rocket->draw(*sp, *camera, explosionPosition, explLightStrength);
+	if (flying)
+		rocket->draw(*sp, *camera, explosionPosition, explLightStrength);
+
+	// Rysowanie bazooki
+	bazooka1->draw(*sp, *camera, explosionPosition, explLightStrength);
+	bazooka2->draw(*sp, *camera, explosionPosition, explLightStrength);
 
 	// Rysowanie gracza
 	player1->draw(*sp, *camera, explosionPosition, explLightStrength);
@@ -385,7 +568,7 @@ void drawScene(GLFWwindow* window) {
 	glfwSwapBuffers(window);
 }
 
-void printFPS() {
+void printFPS(GLFWwindow* window) {
 	static float avg_fps = 0;
 	static float time = 0;
 	static float frames = 0;
@@ -395,8 +578,7 @@ void printFPS() {
 
 	if (time >= 1.0 / 4.0) {
 		avg_fps = (avg_fps + frames / time) / 2;
-		float ms = time / frames * 1000.0;
-		fprintf(stdout, "AVG FPS: %f, ms: %f\n", avg_fps, ms);
+		glfwSetWindowTitle(window, ("Maggots3D - FPS: " + std::to_string(avg_fps)).c_str());
 		time = 0;
 		frames = 0;
 	}
@@ -449,6 +631,13 @@ void terminates(GLFWwindow* window) {
 
 	// Zwolnij zasoby zajęte przez GLFW
 	glfwTerminate();
+
+	// Czekaj na zamknięcie konsoli
+	while (true)
+	{
+
+	}
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -462,7 +651,7 @@ int main(void) {
 	while (!glfwWindowShouldClose(window))
 	{
 		// Oblicz liczbę klatek na sekundę
-		printFPS();
+		printFPS(window);
 
 		// Przesuń kamerę
 		camera->move(glfwGetTime());
@@ -471,33 +660,46 @@ int main(void) {
 		explosionParticles->update(glfwGetTime());
 
 		// Aktualizuj pocisk
-		rocket->position = rocket->getMovementCoords(glfwGetTime());
-		if (rocket->collisionHappened(*terrain)) {
-			explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
-			explLightStrength = 1.0f;
+		if (flying) {
+			if (cam_switch_countdown < CAM_COUNTDOWN) {
+				if (cam_switch_countdown <= 0.0) {
+					fprintf(stdout, "Player %d turn\n", player1_turn ? 1 : 2);
+					player1_turn = !player1_turn;
+					flying = false;
+					cam_switch_countdown = CAM_COUNTDOWN;
+				}
+				else {
+					cam_switch_countdown -= glfwGetTime();
+				}
+			}
+			else {
+				rocket->updatePosition(glfwGetTime());
 
-			explosionParticles->info.position = rocket->position;
-			explosionParticles->emit(100);
-			rocket->time = 0;
-			rocket->position = glm::vec3(2.0f, 2.0f, -5.0f);
-			rocket->initial_position = rocket->position;
-			rocket->setVelocity(1.0f);
-			rocket->setVerticalAngle(0.0f);
-			rocket->setHorizontalAngle(0.0f);
-		}
-
-		if (rocket->collisionHappened(*player1)) {
-			explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
-			explLightStrength = 1.0f;
-
-			explosionParticles->info.position = rocket->position;
-			explosionParticles->emit(100);
-			rocket->time = 0;
-			rocket->position = glm::vec3(2.0f, 2.0f, -5.0f);
-			rocket->initial_position = rocket->position;
-			rocket->setVelocity(1.0f);
-			rocket->setVerticalAngle(0.0f);
-			rocket->setHorizontalAngle(0.0f);
+				if (rocket->collisionHappened(*terrain)) {
+					explosionEffect(rocket, explosionParticles);
+					cam_switch_countdown -= glfwGetTime();
+				}
+				if (rocket->collisionHappened(*player1)) {
+					explosionEffect(rocket, explosionParticles);
+					cam_switch_countdown -= glfwGetTime();
+					player1->hp -= 1;
+					fprintf(stdout, "Player 1 hp: %d\n", player1->hp);
+					if (player1->hp == 0) {
+						fprintf(stdout, "Player 2 wins\n");
+						break;
+					}
+				}
+				if (rocket->collisionHappened(*player2)) {
+					explosionEffect(rocket, explosionParticles);
+					cam_switch_countdown -= glfwGetTime();
+					player2->hp -= 1;
+					fprintf(stdout, "Player 2 hp: %d\n", player2->hp);
+					if (player2->hp == 0) {
+						fprintf(stdout, "Player 1 wins\n");
+						break;
+					}
+				}
+			}
 		}
 
 		// Aktualizuj moc eksplozji
@@ -510,8 +712,12 @@ int main(void) {
 		}
 
 		// Aktualizuj gracza
-		movePlayer(player1);
-		movePlayer(player2);
+		if (player1_turn) {
+			playerStuff(player1, bazooka1);
+		}
+		else {
+			playerStuff(player2, bazooka2);
+		}
 
 		// Zeruj timer
 		glfwSetTime(0);

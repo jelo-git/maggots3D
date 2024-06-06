@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bazooka.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="EBO.h" />
@@ -35,6 +36,7 @@
     <ClInclude Include="VBO.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="bazooka.cpp" />
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="EBO.cpp" />
     <ClCompile Include="lodepng.cpp" />

@@ -17,7 +17,10 @@ void main(){
     vec4 vertex = vec4(positon, 1.0);
 
     iPosition = vec3(M * vertex);
-    iNormal = normal;
+
+    mat3 normalMatrix = transpose(inverse(mat3(M)));
+    iNormal = normalMatrix * normal;
+
     iTexCoord = texCoord;
 
     gl_Position = P * V * M * vertex;
