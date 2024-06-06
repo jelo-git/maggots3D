@@ -362,6 +362,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Ustawienie koloru czyszczenia
 	glClearColor(0.13, 0.13, 0.13, 1);
 	glEnable(GL_DEPTH_TEST);
+	srand(time(NULL));
 
 	// Ustawienie cullface
 	//glEnable(GL_CULL_FACE);
@@ -451,6 +452,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	bazooka2 = new Bazooka(player2->position, bazooka_vertices, bazooka_normals, bazooka_texCoords, bazooka_indices);
 	bazooka2->texture_base = bazooka_tex;
 
+	// Ustawienie wiatru
+	wind.x = (rand() % 2 ? -1 : 1) * rand() % 30 / 10;
+	wind.z = (rand() % 2 ? -1 : 1) * rand() % 30 / 10;
 
 	fprintf(stdout, "Player 1 & 2 hp: %d\n", 3);
 }
