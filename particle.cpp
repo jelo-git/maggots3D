@@ -11,6 +11,8 @@ ParticleSystem::ParticleSystem(ParticleInfo& info)
 	partinfo.size = info.size;
 	partinfo.sizeEnd = info.sizeEnd;
 	partinfo.gravity = info.gravity;
+	partinfo.startColor = info.startColor;
+	partinfo.endColor = info.endColor;
 
 
 	this->info = partinfo;
@@ -51,6 +53,8 @@ void ParticleSystem::update(float dt, glm::vec3 extForces)
 		particles[i].velocity += extForces * this->info.mass * dt;
 		// apply size 
 		particles[i].size = this->info.size + (this->info.sizeEnd - this->info.size) * (1.0f - particles[i].ttl / this->info.ttl);
+		// apply color
+		particles[i].color = this->info.startColor + (this->info.endColor - this->info.startColor) * (1.0f - particles[i].ttl / this->info.ttl);
 		// decrease particle ttl
 		particles[i].ttl -= dt;
 		// remove particle if ttl is less than 0
@@ -92,6 +96,8 @@ void ParticleSystem::render(ShaderProgram& shader, Camera& camera)
 		model = glm::rotate(model, glm::radians(camera.yaw - 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glUniformMatrix4fv(shader.u("M"), 1, GL_FALSE, glm::value_ptr(model));
+
+		glUniform3fv(shader.u("partColor"), 1, glm::value_ptr(particles[i].color));
 		this->vao.Bind();
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
 		this->vao.Unbind();

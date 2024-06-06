@@ -7,22 +7,27 @@
 
 #include "VAO.h"
 #include "EBO.h"
-#include "hitbox.h"
+#include "shaderprogram.h"
+#include "camera.h"
 
 class Player
 {
 public:
 	glm::vec3 position;
+	GLfloat rotation;
 	int hp;
-	Hitbox hitbox;
 
 	// VAO
 	VAO vao;
 	GLuint indices_size;
+	// Texture
+	GLuint texture_base;
 
-	Player(glm::vec3 startPosition, int hp, std::vector<GLfloat>& vertices, std::vector<GLuint>& indices);
+	Player(glm::vec3 startPosition, int hp, std::vector<GLfloat>& vertices, std::vector<GLfloat>& normals, std::vector<GLfloat>& texCoords, std::vector<GLuint>& indices);
 
 	void updateHP(int damage);
+
+	void draw(ShaderProgram& shader, Camera& camera);
 };
 
 #endif // !PLAYER_H

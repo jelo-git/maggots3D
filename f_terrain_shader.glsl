@@ -11,8 +11,11 @@ in vec2 iTexCoord;
 
 out vec4 color;
 
-void main() {
+vec4 pointLight(){
+	return vec4(0.0,0.0,0.0,0.0);
+}
 
+vec4 directLight(){
 	// ambient
 	float ambient = 0.10;
 
@@ -31,5 +34,10 @@ void main() {
 	}
 
 	// combine results
-	color = texture(textureBase, iTexCoord) * lightColor * (diff + ambient + spec);
+	return (texture(textureBase, iTexCoord) * lightColor * (diff + ambient + spec));
+}
+
+
+void main() {
+	color = directLight() + pointLight();
 }

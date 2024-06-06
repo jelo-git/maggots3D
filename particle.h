@@ -15,6 +15,8 @@ struct ParticleInfo
 	glm::vec3 velocity = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 velocityVariation = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 gravity = glm::vec3(0.0f, -9.8f, 0.0f);
+	glm::vec3 startColor = glm::vec3(1.0f, 1.0f, 1.0f);
+	glm::vec3 endColor = glm::vec3(1.0f, 1.0f, 1.0f);
 	float mass = 1.0f;
 	float ttl = 1.0f;
 	float size = 1.0f;
@@ -32,6 +34,7 @@ private:
 		float mass = 1.0f;
 		float ttl = 1.0f;
 		float size = 1.0f;
+		glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
 	};
 
 	// Particle pool

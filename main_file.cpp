@@ -43,7 +43,6 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "terrain.h"
 
 #include "tiny_obj_loader.h"
-#include "hitbox.h"
 #include "player.h"
 #include "rocket.h"
 
@@ -203,7 +202,7 @@ GLuint readTexture(const char* filename) {
 	return tex;
 }
 
-bool readModel(const char* filename) {
+bool readModel(const char* filename, std::vector<GLfloat>& vertices, std::vector<GLfloat>& normals, std::vector<GLfloat>& texCoords, std::vector<GLuint>& indices) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -250,9 +249,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glEnable(GL_DEPTH_TEST);
 
 	// Ustawienie cullface
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
-	//glFrontFace(GL_CCW);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
 
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -269,11 +268,14 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Utworzenie particle system
 	ParticleInfo info;
 	info.position = glm::vec3(0.0f, 1.0f, 0.0f);
-	info.sizeEnd = 1.0f;
-	info.ttl = 10.0f;
+	info.size = 0.5f;
+	info.sizeEnd = 0.0f;
+	info.startColor = glm::vec3(0.85f, 0.8f, 0.01f);
+	info.endColor = glm::vec3(1.0f, 0.12f, 0.1f);
+	info.ttl = 1.0f;
 	info.gravity = glm::vec3(0.0f, -9.0f, 0.0f);
-	info.velocity = glm::vec3(0.0f, 2.0f, 0.0f);
-	info.velocityVariation = glm::vec3(1.0f, 1.0f, 1.0f);
+	info.velocity = glm::vec3(0.0f, 3.0f, 0.0f);
+	info.velocityVariation = glm::vec3(2.0f, 3.0f, 2.0f);
 	explosionParticles = new ParticleSystem(info);
 	explosionParticles->emit(100);
 
@@ -282,22 +284,42 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	// Wczytanie tekstur
 	terrain->texture_base = readTexture("sand.png");
-	texture = readTexture("cate.png");
 
 	// Wczytanie pocisku
-	rocket = new Rocket(5.0f, 5.0f, -5.0f, vertices, indices);
-	rocket->texture_base = texture;
-	rocket->setVelocity(0.0f);
+	std::vector<GLfloat> rocket_vertices;
+	std::vector<GLfloat> rocket_normals;
+	std::vector<GLfloat> rocket_texCoords;
+	std::vector<GLuint> rocket_indices;
+	if (!readModel("models/Missile.obj", rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices)) {
+		fprintf(stderr, "Nie można wczytać modelu pocisku\n");
+	}
+	rocket = new Rocket(2.0f, 2.0f, -5.0f, rocket_vertices, rocket_normals, rocket_texCoords, rocket_indices);
+	GLuint rocket_base = readTexture("models/missile_base.png");
+	rocket->texture_base = rocket_base;
+	rocket->setVelocity(1.0f);
 	rocket->setVerticalAngle(0.0f);
 	rocket->setHorizontalAngle(0.0f);
 
 	// Wczytanie gracza
 	glm::vec2 pos = glm::vec2(TERRAIN_SIZE / 2, -0.1f * TERRAIN_SIZE);
 	glm::vec3 spawn = glm::vec3(pos.x, terrain->getHeight(pos.x, pos.y), pos.y);
-	player1 = new Player(spawn, 3, vertices, indices);
+
+	std::vector<GLfloat> player_vertices;
+	std::vector<GLfloat> player_normals;
+	std::vector<GLfloat> player_texCoords;
+	std::vector<GLuint> player_indices;
+	if (!readModel("models/Mesh_Ape.obj", player_vertices, player_normals, player_texCoords, player_indices)) {
+		fprintf(stderr, "Nie można wczytać modelu gracza\n");
+	}
+
+	player1 = new Player(spawn, 3, player_vertices, player_normals, player_texCoords, player_indices);
+	GLuint player_tex = readTexture("models/Tex_Ape.png");
+	player1->texture_base = player_tex;
 	pos = glm::vec2(TERRAIN_SIZE / 2, -0.9f * TERRAIN_SIZE);
 	spawn = glm::vec3(pos.x, terrain->getHeight(pos.x, pos.y), pos.y);
-	player2 = new Player(spawn, 3, vertices, indices);
+	player2 = new Player(spawn, 3, player_vertices, player_normals, player_texCoords, player_indices);
+	player2->texture_base = player_tex;
+	player2->rotation = glm::radians(180.0f);
 }
 
 // Zwolnienie zasobów zajętych przez program
@@ -324,6 +346,18 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	delete player2;
 }
 
+void movePlayer(Player* p) {
+	//Przesuń gracza
+	float x = speed_x * glfwGetTime();
+	float y = speed_y * glfwGetTime();
+	if (x != 0 || y != 0) {
+		p->rotation = atan2(x, y);
+	}
+	p->position.x += x;
+	p->position.z += y;
+	p->position.y = terrain->getHeight(p->position.x, p->position.z);
+}
+
 // Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window) {
 	// Wyczyść bufery
@@ -339,22 +373,11 @@ void drawScene(GLFWwindow* window) {
 	explosionParticles->render(*sp_particle, *camera);
 
 	// Rysowanie pocisku
-	rocket->draw(*sp_particle, *camera);
-	fprintf(stdout, "Rocket position: %f %f %f\n", rocket->position.x, rocket->position.y, rocket->position.z);
+	rocket->draw(*sp, *camera);
 
 	// Rysowanie gracza
-	//sp->use();
-	//camera->shaderMatrix(*sp);
-	//glm::mat4 M = glm::mat4(1.0f);
-	//float height = terrain->getHeight(playerPosition.x, playerPosition.y);
-	//M = glm::translate(M, glm::vec3(playerPosition.x, height, playerPosition.y));
-	//glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-	//glUniform1i(sp->u("textureBase"), 0);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, texture);
-	//player_VAO->Bind();
-	//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
-	//player_VAO->Unbind();
+	player1->draw(*sp, *camera);
+	player2->draw(*sp, *camera);
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
@@ -446,17 +469,32 @@ int main(void) {
 		explosionParticles->update(glfwGetTime());
 
 		// Aktualizuj pocisk
-		/*rocket->position = rocket->getMovementCoords(glfwGetTime());
-		if (rocket->collisionHappened(*player, *terrain)) {
-			player->updateHP();
+		rocket->position = rocket->getMovementCoords(glfwGetTime());
+		if (rocket->collisionHappened(*terrain)) {
 			explosionParticles->info.position = rocket->position;
 			explosionParticles->emit(100);
-		}*/
+			rocket->time = 0;
+			rocket->position = glm::vec3(2.0f, 2.0f, -5.0f);
+			rocket->initial_position = rocket->position;
+			rocket->setVelocity(1.0f);
+			rocket->setVerticalAngle(0.0f);
+			rocket->setHorizontalAngle(0.0f);
+		}
 
-		//Przesuń gracza
-		player1->position.x += speed_x * glfwGetTime();
-		player1->position.y += speed_y * glfwGetTime();
-		player1->position.z = terrain->getHeight(player1->position.x, player1->position.z);
+		if (rocket->collisionHappened(*player1)) {
+			explosionParticles->info.position = rocket->position;
+			explosionParticles->emit(100);
+			rocket->time = 0;
+			rocket->position = glm::vec3(2.0f, 2.0f, -5.0f);
+			rocket->initial_position = rocket->position;
+			rocket->setVelocity(1.0f);
+			rocket->setVerticalAngle(0.0f);
+			rocket->setHorizontalAngle(0.0f);
+		}
+
+		// Aktualizuj gracza
+		movePlayer(player1);
+		movePlayer(player2);
 
 		// Zeruj timer
 		glfwSetTime(0);
