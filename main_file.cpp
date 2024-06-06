@@ -62,6 +62,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 Camera* camera;
 
 ParticleSystem* explosionParticles;
+glm::vec3 explosionPosition;
+float explLightStrength = 0.0f;
 
 Rocket* rocket;
 
@@ -249,9 +251,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glEnable(GL_DEPTH_TEST);
 
 	// Ustawienie cullface
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glFrontFace(GL_CCW);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
+	//glFrontFace(GL_CCW);
 
 	// Callback funkcje
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
@@ -367,17 +369,17 @@ void drawScene(GLFWwindow* window) {
 	camera->updateMatrix(60.0f, 0.01f, 50.0f);
 
 	// Rysowanie terenu
-	terrain->draw(*sp, *camera);
+	terrain->draw(*sp, *camera, explosionPosition, explLightStrength);
 
 	// Rysowanie particle system
 	explosionParticles->render(*sp_particle, *camera);
 
 	// Rysowanie pocisku
-	rocket->draw(*sp, *camera);
+	rocket->draw(*sp, *camera, explosionPosition, explLightStrength);
 
 	// Rysowanie gracza
-	player1->draw(*sp, *camera);
-	player2->draw(*sp, *camera);
+	player1->draw(*sp, *camera, explosionPosition, explLightStrength);
+	player2->draw(*sp, *camera, explosionPosition, explLightStrength);
 
 	// Przerzuć tylny bufor na przedni
 	glfwSwapBuffers(window);
@@ -471,6 +473,9 @@ int main(void) {
 		// Aktualizuj pocisk
 		rocket->position = rocket->getMovementCoords(glfwGetTime());
 		if (rocket->collisionHappened(*terrain)) {
+			explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
+			explLightStrength = 1.0f;
+
 			explosionParticles->info.position = rocket->position;
 			explosionParticles->emit(100);
 			rocket->time = 0;
@@ -482,6 +487,9 @@ int main(void) {
 		}
 
 		if (rocket->collisionHappened(*player1)) {
+			explosionPosition = rocket->position + glm::vec3(0.0f, 1.0f, 0.0f);
+			explLightStrength = 1.0f;
+
 			explosionParticles->info.position = rocket->position;
 			explosionParticles->emit(100);
 			rocket->time = 0;
@@ -490,6 +498,15 @@ int main(void) {
 			rocket->setVelocity(1.0f);
 			rocket->setVerticalAngle(0.0f);
 			rocket->setHorizontalAngle(0.0f);
+		}
+
+		// Aktualizuj moc eksplozji
+		if (explLightStrength > 0) {
+			explLightStrength -= 1.0f * glfwGetTime();
+		}
+		if (explLightStrength < 0)
+		{
+			explLightStrength = 0.0f;
 		}
 
 		// Aktualizuj gracza

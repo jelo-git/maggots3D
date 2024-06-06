@@ -43,7 +43,7 @@ public:
 
 	float getHeight(float x, float y);
 
-	void draw(ShaderProgram& shader, Camera& camera);
+	void draw(ShaderProgram& shader, Camera& camera, glm::vec3& explPos, float explLightStrength);
 };
 
 #endif

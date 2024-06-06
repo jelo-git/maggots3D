@@ -88,7 +88,7 @@ void Rocket::collisionEvent()
 	this->time = 0.0;
 }
 
-void Rocket::draw(ShaderProgram& shader, Camera& camera)
+void Rocket::draw(ShaderProgram& shader, Camera& camera, glm::vec3& explPos, float explLightStrength)
 {
 	shader.use();
 	camera.shaderMatrix(shader, "V", "P");
@@ -105,6 +105,9 @@ void Rocket::draw(ShaderProgram& shader, Camera& camera)
 	glUniform4fv(shader.u("lightColor"), 1, glm::value_ptr(lightColor));
 
 	glUniform3fv(shader.u("viewPos"), 1, glm::value_ptr(camera.position));
+
+	glUniform1f(shader.u("expStr"), explLightStrength);
+	glUniform3fv(shader.u("lightPos"), 1, glm::value_ptr(explPos));
 
 	// Bind texture
 	glActiveTexture(GL_TEXTURE0);
